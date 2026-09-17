@@ -1,0 +1,11 @@
+# 构建产物
+dist/
+*.exe
+
+# 本地多模块开发（go work init . ../ClawProxyHub）
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
