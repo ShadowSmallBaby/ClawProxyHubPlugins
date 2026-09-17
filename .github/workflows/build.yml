@@ -1,0 +1,88 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["index.json", "README.md", "LICENSE"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# main 上的构建串行执行：发布 Release 与回写 index.json 不能并发
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BASE_URL: https://github.com/${{ github.repository }}/releases/download
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Vet & test
+        run: |
+          go vet ./...
+          go test ./...
+
+      # 已发布版本不可变：跳过重建，索引条目沿用仓库里的 index.json
+      - name: Resolve released versions
+        id: released
+        if: github.event_name != 'pull_request'
+        run: |
+          skip=""
+          for mf in plugins/*/manifest.json; do
+            name=$(jq -r .name "$mf"); version=$(jq -r .version "$mf")
+            if gh release view "${name}-v${version}" >/dev/null 2>&1; then
+              skip="${skip:+$skip,}$name"
+            fi
+          done
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+          echo "already released: ${skip:-none}"
+
+      - name: Pack
+        run: go run ./tools/pack -out dist -base-url "$BASE_URL" -skip "${{ steps.released.outputs.skip }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugins
+          path: dist/
+
+      # 每个插件版本一个 Release：tag = <name>-v<version>，资产 = <name>-<version>.cphplugin
+      - name: Release new versions
+        if: github.event_name != 'pull_request'
+        run: |
+          jq -r '.[] | "\(.name) \(.version) \(.sha256)"' dist/index.json | while read -r name version sha; do
+            tag="${name}-v${version}"; pkg="dist/${name}-${version}.cphplugin"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              echo "exists: $tag"; continue
+            fi
+            [ -f "$pkg" ] || { echo "missing package $pkg"; exit 1; }
+            gh release create "$tag" "$pkg" --target "$GITHUB_SHA" \
+              --title "$name v$version" --notes "sha256: \`$sha\`"
+            echo "released: $tag"
+          done
+
+      # 市场索引回写到 main（核心默认从 raw.githubusercontent.com/<repo>/main/index.json 读取）
+      - name: Commit index.json
+        if: github.event_name != 'pull_request'
+        run: |
+          if cmp -s dist/index.json index.json; then
+            echo "index unchanged"; exit 0
+          fi
+          git fetch origin main
+          git checkout -B main origin/main
+          cp dist/index.json index.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.json
+          git commit -m "chore: update marketplace index [skip ci]"
+          git push origin main
