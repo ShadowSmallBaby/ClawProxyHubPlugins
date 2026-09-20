@@ -1146,11 +1146,100 @@ func (p *plugin) fetchCredits(ctx context.Context, cred *credential) string {
 }
 
 // ListModels 上游按 model=auto 路由，模型目录由客户端自行发现。
+// codebuddyModels 上游模型端点不可达时的兜底清单。auto 为上游路由虚拟模型。
+var codebuddyModels = []string{
+	"auto",
+	"glm-5.2", "glm-5.1", "glm-5v-turbo",
+	"kimi-k2.7", "kimi-k2.6", "kimi-k3",
+	"deepseek-v4-pro", "deepseek-v4-flash",
+	"minimax-m3", "hy3-preview-agent", "hy3",
+}
+
+// ListModels 拉上游产品配置模型目录（cli agent 可用集），失败回退静态清单。
 func (p *plugin) ListModels(ctx context.Context, credBlob *pb.CredentialBlob) (*pb.ModelList, error) {
-	return &pb.ModelList{Models: []*pb.ModelInfo{
-		{Id: "auto", Label: map[string]string{"zh": "自动（上游路由）", "en": "Auto (upstream routing)"},
-			SupportsTools: true, SupportsStream: true},
-	}}, nil
+	cred, err := credFrom(credBlob)
+	if err != nil {
+		return &pb.ModelList{Models: staticModels()}, nil
+	}
+	if models := p.fetchModels(ctx, cred); len(models) > 0 {
+		return &pb.ModelList{Models: models}, nil
+	}
+	return &pb.ModelList{Models: staticModels()}, nil
+}
+
+// fetchModels GET /console/enterprises/{enterpriseId|personal}/models，
+// 取 productConfig.models，若声明了 cli agent 则按其 model 集过滤，跳过 disabled。
+func (p *plugin) fetchModels(ctx context.Context, cred *credential) []*pb.ModelInfo {
+	ent := cred.Account.EnterpriseID
+	if ent == "" {
+		ent = "personal"
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", upstreamBase+"/console/enterprises/"+ent+"/models", nil)
+	if err != nil {
+		return nil
+	}
+	for k, v := range p.headers(cred, true) {
+		req.Header.Set(k, v)
+	}
+	resp, err := p.hc(cred).Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil
+	}
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
+	var cfg struct {
+		Models []struct {
+			ID             string `json:"id"`
+			Name           string `json:"name"`
+			ContextWindow  int32  `json:"contextWindow"`
+			SupportsImages bool   `json:"supportsImages"`
+			Disabled       bool   `json:"disabled"`
+		} `json:"models"`
+		Agents []struct {
+			Name   string   `json:"name"`
+			Models []string `json:"models"`
+		} `json:"agents"`
+	}
+	if json.Unmarshal(body, &cfg) != nil {
+		return nil
+	}
+	var cliSet map[string]bool
+	for _, a := range cfg.Agents {
+		if a.Name == "cli" {
+			cliSet = map[string]bool{}
+			for _, id := range a.Models {
+				cliSet[id] = true
+			}
+		}
+	}
+	out := make([]*pb.ModelInfo, 0, len(cfg.Models))
+	for _, m := range cfg.Models {
+		if m.Disabled || m.ID == "" || (cliSet != nil && !cliSet[m.ID]) {
+			continue
+		}
+		info := &pb.ModelInfo{Id: m.ID, ContextWindow: m.ContextWindow, SupportsTools: true, SupportsStream: true}
+		if m.Name != "" {
+			info.Label = map[string]string{"zh": m.Name, "en": m.Name}
+		}
+		out = append(out, info)
+	}
+	return out
+}
+
+// staticModels 上游不可达时的兜底清单。
+func staticModels() []*pb.ModelInfo {
+	models := make([]*pb.ModelInfo, 0, len(codebuddyModels))
+	for _, id := range codebuddyModels {
+		m := &pb.ModelInfo{Id: id, SupportsTools: true, SupportsStream: true}
+		if id == "auto" {
+			m.Label = map[string]string{"zh": "自动（上游路由）", "en": "Auto (upstream routing)"}
+		}
+		models = append(models, m)
+	}
+	return models
 }
 
 // ---------- Chat ----------
