@@ -3,7 +3,7 @@ module github.com/ShadowSmallBaby/ClawProxyHubPlugins
 go 1.26.2
 
 require (
-	github.com/ShadowSmallBaby/ClawProxyHub v0.0.0-20260917000345-d90796a8aa6d
+	github.com/ShadowSmallBaby/ClawProxyHub v1.1.0
 	google.golang.org/grpc v1.83.2
 )
 
