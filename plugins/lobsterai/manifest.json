@@ -1,10 +1,11 @@
 {
   "name": "lobsterai",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "author": "cph",
   "label": {
     "zh": "LobsterAI",
     "en": "LobsterAI"
   },
-  "icon": "icon.png"
+  "icon": "icon.png",
+  "protocol_version": 2
 }

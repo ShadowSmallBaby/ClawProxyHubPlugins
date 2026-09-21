@@ -6,12 +6,15 @@
 | --- | --- |
 | `lobsterai` | 网易有道 LobsterAI：浏览器 OAuth / 凭据文件登录，每日签到 |
 | `workbuddy` | 腾讯 WorkBuddy / CodeBuddy：手机验证码 / 浏览器授权 / 凭据文件登录，签到、盲盒、旅行、成长任务 |
+| `newapi` | New API：API 密钥 / 密码 / 凭据文件登录，余额折算与每日签到；多实例（不同站点各建实例填 `base_url`） |
+
+全部插件已升级到契约 **protocol v2**（实例维度）。
 
 ## 目录约定
 
 ```
 plugins/<name>/
-├── manifest.json   # 版本号唯一来源：name（= 目录名）、version、author、label、icon
+├── manifest.json   # name（= 目录名）、version、author、label、icon、protocol_version、capabilities、instance_schema
 ├── icon.png        # 可选，正方形 PNG 128–256px
 └── main.go         # 入口：sdk.Serve(&plugin{})，Handshake 回报 version 变量
 tools/pack/         # 打包器：交叉编译 + .cphplugin + index.json
@@ -19,6 +22,8 @@ index.json          # 市场索引（CI 生成并回写，勿手改）
 ```
 
 插件实现 `pb.ClawPluginServer`（契约见核心 `sdk/proto/cph.proto`），复用 `sdk/openaiup` / `sdk/anthropicup` 适配 OpenAI / Anthropic 方言上游；宿主回调（日志 / 存储 / 代理）实现 `sdk.HostAware`。参考核心 `examples/stub` 与既有插件。
+
+**多实例（protocol v2）**：`manifest.json` 声明 `capabilities` 含 `instances`（`sdk.CapabilityInstances`）+ `protocol_version: 2`，站点可配字段由 `instance_schema`（JSON Schema）声明，核心固定提供 name + base_url。登录 / 刷新 / 设置 / 任务能力回调按 `instance_id` 区分；`GetProxy` 可用 `account_id` 优先账号级代理。未声明该能力的插件只有一个默认实例。
 
 ## 开发
 

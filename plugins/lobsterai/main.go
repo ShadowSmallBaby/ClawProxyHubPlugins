@@ -1191,7 +1191,7 @@ func mustJSON(v interface{}) []byte {
 
 // ---------- 任务能力：每日签到 ----------
 
-func (p *plugin) ListTaskCapabilities(ctx context.Context, _ *pb.Empty) (*pb.TaskCapabilities, error) {
+func (p *plugin) ListTaskCapabilities(ctx context.Context, _ *pb.TaskCapabilitiesRequest) (*pb.TaskCapabilities, error) {
 	return &pb.TaskCapabilities{
 		Capabilities: []*pb.TaskCapability{
 			{

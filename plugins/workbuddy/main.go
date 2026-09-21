@@ -35,8 +35,8 @@ const (
 	pathRefresh  = "/v2/plugin/auth/token/refresh"
 	pathSendSMS  = "/v2/plugin/login/send-sms"
 	pathLoginTok = "/v2/plugin/login/token"
-	// 浏览器形态 UA：插件登录接口在 www.workbuddy.cn，不是客户端头
-	browserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+	// 浏览器形态 UA 内置默认：插件登录接口在 www.workbuddy.cn，不是客户端头（核心全局浏览器 UA 非空时覆盖）
+	defaultBrowserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
 		"(KHTML, like Gecko) Chrome/138.0.7204.251 Safari/537.36"
 	// 客户端标识默认值：可被插件设置覆盖（user_agent / ide_version）
 	defaultUserAgent  = "WorkBuddy/5.5.4 WorkBuddy/5.5.4 CLI/2.137.1"
@@ -62,14 +62,18 @@ func (p *plugin) SetHost(host *sdk.Host) { p.host = host }
 
 // 当前生效的客户端标识（ensureIdentity 刷新；telemetry 等包级代码读取）。
 var (
-	identMu     sync.RWMutex
-	identUA     = defaultUserAgent
-	identIDEVer = defaultIDEVersion
+	identMu        sync.RWMutex
+	identUA        = defaultUserAgent
+	identIDEVer    = defaultIDEVersion
+	identBrowserUA = defaultBrowserUA
 )
 
 func clientUA() string { identMu.RLock(); defer identMu.RUnlock(); return identUA }
 
 func clientIDEVersion() string { identMu.RLock(); defer identMu.RUnlock(); return identIDEVer }
+
+// browserUA 浏览器形态 UA：核心全局浏览器 UA（sdk.SettingBrowserUserAgent）非空则用它，否则内置。
+func browserUA() string { identMu.RLock(); defer identMu.RUnlock(); return identBrowserUA }
 
 // versionFromUA 从 UA 提取版本号（首个 "/" 后到空格前的段）。
 func versionFromUA(ua string) string {
@@ -85,7 +89,7 @@ func versionFromUA(ua string) string {
 }
 
 // ensureIdentity 懒刷新客户端标识：读插件设置（30s 缓存），
-// user_agent 覆盖 UA；ide_version 留空则从 UA 解析。
+// user_agent 覆盖 UA；ide_version 留空则从 UA 解析；核心注入的全局浏览器 UA 覆盖内置浏览器 UA。
 func (p *plugin) ensureIdentity() {
 	p.mu.Lock()
 	fresh := p.settingsJSON != nil && time.Since(p.settingsAt) < 30*time.Second
@@ -93,7 +97,7 @@ func (p *plugin) ensureIdentity() {
 	if fresh {
 		return
 	}
-	ua, ver := defaultUserAgent, ""
+	ua, ver, bua := defaultUserAgent, "", defaultBrowserUA
 	if p.host != nil {
 		if raw := p.host.Settings("workbuddy"); len(raw) > 0 {
 			var cfg map[string]string
@@ -102,6 +106,9 @@ func (p *plugin) ensureIdentity() {
 					ua = cfg["user_agent"]
 				}
 				ver = cfg["ide_version"]
+				if v := strings.TrimSpace(cfg[sdk.SettingBrowserUserAgent]); v != "" {
+					bua = v
+				}
 			}
 		}
 	}
@@ -112,7 +119,7 @@ func (p *plugin) ensureIdentity() {
 		ver = defaultIDEVersion
 	}
 	identMu.Lock()
-	identUA, identIDEVer = ua, ver
+	identUA, identIDEVer, identBrowserUA = ua, ver, bua
 	identMu.Unlock()
 	p.mu.Lock()
 	p.settingsJSON, p.settingsAt = []byte("cached"), time.Now()
@@ -334,6 +341,7 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 }
 
 func (p *plugin) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResult, error) {
+	p.ensureIdentity() // 登录走浏览器形态头，先刷新全局浏览器 UA
 	switch req.MethodId {
 	case "auth_file":
 		cred, err := parseCred([]byte(req.Form["content"]))
@@ -623,7 +631,7 @@ func (p *plugin) sendSMS(ctx context.Context, phone string) error {
 		"Content-Type": "application/json",
 		"Accept":       "application/json, text/plain, */*",
 		"Origin":       loginBase, "Referer": loginBase + "/",
-		"User-Agent": browserUA,
+		"User-Agent": browserUA(),
 	}, map[string]interface{}{"phone": phone})
 	if err != nil {
 		return err
@@ -638,7 +646,7 @@ func (p *plugin) loginWithSMS(ctx context.Context, phone, code string) (string, 
 		"Content-Type": "application/json",
 		"Accept":       "application/json, text/plain, */*",
 		"Origin":       loginBase, "Referer": loginBase + "/",
-		"User-Agent": browserUA,
+		"User-Agent": browserUA(),
 	}, map[string]interface{}{
 		"login_method": "phone", "phone": phone, "sms_code": code,
 	})
@@ -1300,7 +1308,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 
 // ---------- 任务能力：每日签到 ----------
 
-func (p *plugin) ListTaskCapabilities(ctx context.Context, _ *pb.Empty) (*pb.TaskCapabilities, error) {
+func (p *plugin) ListTaskCapabilities(ctx context.Context, _ *pb.TaskCapabilitiesRequest) (*pb.TaskCapabilities, error) {
 	return &pb.TaskCapabilities{
 		Capabilities: []*pb.TaskCapability{
 			{
