@@ -1,5 +1,7 @@
 github.com/ShadowSmallBaby/ClawProxyHub v1.1.0 h1:qli5Gm9F8cWU+ibShwgPjM4JaXyOmNYb278mj7jrhOs=
 github.com/ShadowSmallBaby/ClawProxyHub v1.1.0/go.mod h1:lKnfBOv/VvWZuDTwpZh7McCW6883MBoMJd5up/JzrLg=
+github.com/ShadowSmallBaby/ClawProxyHub v1.1.2 h1:cnxlBaEfReVJtQweaTe2h9E7I/uS8r+FE6Iv0yOEJWA=
+github.com/ShadowSmallBaby/ClawProxyHub v1.1.2/go.mod h1:lKnfBOv/VvWZuDTwpZh7McCW6883MBoMJd5up/JzrLg=
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
 github.com/bufbuild/protocompile v0.14.1/go.mod h1:ppVdAIhbr2H8asPk6k4pY7t9zB1OU5DoEw9xY/FUi1c=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
