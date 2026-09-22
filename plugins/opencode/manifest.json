@@ -1,0 +1,11 @@
+{
+  "name": "opencode",
+  "version": "0.1.1",
+  "author": "cph",
+  "label": {
+    "zh": "OpenCode",
+    "en": "OpenCode"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
