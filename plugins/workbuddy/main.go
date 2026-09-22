@@ -1154,13 +1154,15 @@ func (p *plugin) fetchCredits(ctx context.Context, cred *credential) string {
 }
 
 // ListModels 上游按 model=auto 路由，模型目录由客户端自行发现。
-// codebuddyModels 上游模型端点不可达时的兜底清单。auto 为上游路由虚拟模型。
+// codebuddyModels 上游模型端点不可达时的兜底清单（2026-09 实测 /v3/config cli agent 集合）。
+// auto 为上游路由虚拟模型。
 var codebuddyModels = []string{
 	"auto",
-	"glm-5.2", "glm-5.1", "glm-5v-turbo",
-	"kimi-k2.7", "kimi-k2.6", "kimi-k3",
-	"deepseek-v4-pro", "deepseek-v4-flash",
-	"minimax-m3", "hy3-preview-agent", "hy3",
+	"hy4-preview-f", "hy3", "hy3-x",
+	"glm-5.3", "glm-5.3-flash", "glm-5.2", "glm-5.1", "glm-5v-turbo",
+	"kimi-k3-1", "kimi-k2.8-preview", "kimi-k2.7", "kimi-k2.6",
+	"deepseek-v4.1-flash", "deepseek-v4-pro",
+	"minimax-m3",
 }
 
 // ListModels 拉上游产品配置模型目录（cli agent 可用集），失败回退静态清单。
@@ -1200,11 +1202,13 @@ func (p *plugin) fetchModels(ctx context.Context, cred *credential) []*pb.ModelI
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	var cfg struct {
 		Models []struct {
-			ID             string `json:"id"`
-			Name           string `json:"name"`
-			ContextWindow  int32  `json:"contextWindow"`
-			SupportsImages bool   `json:"supportsImages"`
-			Disabled       bool   `json:"disabled"`
+			ID string `json:"id"`
+			// contextWindow 上游为新版对象形态（{defaultLength, supportedLengths}），
+			// 部分条目缺失该字段，用 RawMessage 兼容两种形态
+			ContextWindow  json.RawMessage `json:"contextWindow"`
+			MaxInputTokens int32           `json:"maxInputTokens"`
+			SupportsImages bool            `json:"supportsImages"`
+			Disabled       bool            `json:"disabled"`
 		} `json:"models"`
 		Agents []struct {
 			Name   string   `json:"name"`
@@ -1228,13 +1232,29 @@ func (p *plugin) fetchModels(ctx context.Context, cred *credential) []*pb.ModelI
 		if m.Disabled || m.ID == "" || (cliSet != nil && !cliSet[m.ID]) {
 			continue
 		}
-		info := &pb.ModelInfo{Id: m.ID, ContextWindow: m.ContextWindow, SupportsTools: true, SupportsStream: true}
-		if m.Name != "" {
-			info.Label = map[string]string{"zh": m.Name, "en": m.Name}
-		}
+		info := &pb.ModelInfo{Id: m.ID, ContextWindow: contextWindow(m), SupportsTools: true, SupportsStream: true}
+		info.Label = map[string]string{"zh": m.ID, "en": m.ID}
 		out = append(out, info)
 	}
 	return out
+}
+
+// contextWindow 模型上下文窗口：优先 contextWindow.defaultLength（对象形态），
+// 缺失/旧形态时回退 maxInputTokens；两者都无效返回 0。
+func contextWindow(m struct {
+	ID             string          `json:"id"`
+	ContextWindow  json.RawMessage `json:"contextWindow"`
+	MaxInputTokens int32           `json:"maxInputTokens"`
+	SupportsImages bool            `json:"supportsImages"`
+	Disabled       bool            `json:"disabled"`
+}) int32 {
+	var cw struct {
+		DefaultLength int32 `json:"defaultLength"`
+	}
+	if len(m.ContextWindow) > 0 && json.Unmarshal(m.ContextWindow, &cw) == nil && cw.DefaultLength > 0 {
+		return cw.DefaultLength
+	}
+	return m.MaxInputTokens
 }
 
 // staticModels 上游不可达时的兜底清单。
