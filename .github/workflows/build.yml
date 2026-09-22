@@ -3,7 +3,7 @@ name: build
 on:
   push:
     branches: [main]
-    paths-ignore: ["index.json", "README.md", "LICENSE"]
+    paths-ignore: ["index.json", "README.md", "AGENTS.md", "LICENSE"]
   pull_request:
   workflow_dispatch:
 
