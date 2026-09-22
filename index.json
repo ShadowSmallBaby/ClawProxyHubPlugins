@@ -1,27 +1,51 @@
 [
   {
+    "name": "cline",
+    "version": "0.1.1",
+    "author": "cph",
+    "label": {
+      "en": "Cline",
+      "zh": "Cline"
+    },
+    "published_at": "2026-09-22",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cline-v0.1.1/cline-0.1.1.cphplugin",
+    "sha256": "0d30cc16a7f2d7281453dfd7cd4c02cb5d1c2678fd8dbbfbf78173853f3d2511"
+  },
+  {
     "name": "lobsterai",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "author": "cph",
     "label": {
       "en": "LobsterAI",
       "zh": "LobsterAI"
     },
-    "published_at": "2026-09-21",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.2/lobsterai-0.1.2.cphplugin",
-    "sha256": "ba42e33ead2a452f47d8fbef0914426e0985aba145e61b754d21c9d244febd79"
+    "published_at": "2026-09-22",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.3/lobsterai-0.1.3.cphplugin",
+    "sha256": "2f7b874572614972563273b1bd95e721a839eb22c3fee1c969901ae13356ccbe"
   },
   {
     "name": "newapi",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "author": "cph",
     "label": {
       "en": "New API",
       "zh": "New API"
     },
-    "published_at": "2026-09-21",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.0/newapi-0.1.0.cphplugin",
-    "sha256": "49016e7ff4e96a2084d7e63a654175b09d71f37c6bfb8b5127b5861fdfac568c"
+    "published_at": "2026-09-22",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.1/newapi-0.1.1.cphplugin",
+    "sha256": "8d756770e42261dfadb1312220a331f40ba5b737af35910d0e0276bc5b5c5586"
+  },
+  {
+    "name": "opencode",
+    "version": "0.1.1",
+    "author": "cph",
+    "label": {
+      "en": "OpenCode",
+      "zh": "OpenCode"
+    },
+    "published_at": "2026-09-22",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/opencode-v0.1.1/opencode-0.1.1.cphplugin",
+    "sha256": "0c3da3efb26246f65ffe72dc95b77463213a45876e4b380fd567dc957e85fb42"
   },
   {
     "name": "workbuddy",
