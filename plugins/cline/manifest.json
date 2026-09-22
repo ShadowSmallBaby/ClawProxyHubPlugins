@@ -1,0 +1,11 @@
+{
+  "name": "cline",
+  "version": "0.1.1",
+  "author": "cph",
+  "label": {
+    "zh": "Cline",
+    "en": "Cline"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
