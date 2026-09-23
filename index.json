@@ -1,62 +1,74 @@
 [
   {
     "name": "cline",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "author": "cph",
     "label": {
       "en": "Cline",
       "zh": "Cline"
     },
-    "published_at": "2026-09-22",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cline-v0.1.1/cline-0.1.1.cphplugin",
-    "sha256": "0d30cc16a7f2d7281453dfd7cd4c02cb5d1c2678fd8dbbfbf78173853f3d2511"
+    "published_at": "2026-09-23",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cline-v0.1.2/cline-0.1.2.cphplugin",
+    "sha256": "6217173467f85b2be54282ea7f64cd39e1c75ab72b03541a9d152920fe8e87a1"
+  },
+  {
+    "name": "ima",
+    "version": "0.1.0",
+    "author": "cph",
+    "label": {
+      "en": "ima",
+      "zh": "ima"
+    },
+    "published_at": "2026-09-23",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/ima-v0.1.0/ima-0.1.0.cphplugin",
+    "sha256": "43d441343f4ccba5dee7dc8f18dce355a1102f28fc16f63426b293b76d233e50"
   },
   {
     "name": "lobsterai",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "author": "cph",
     "label": {
       "en": "LobsterAI",
       "zh": "LobsterAI"
     },
-    "published_at": "2026-09-22",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.3/lobsterai-0.1.3.cphplugin",
-    "sha256": "2f7b874572614972563273b1bd95e721a839eb22c3fee1c969901ae13356ccbe"
+    "published_at": "2026-09-23",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.4/lobsterai-0.1.4.cphplugin",
+    "sha256": "a7d426b38c2527e6fc1787c699736b49ec2cc4f5d0f875c22798ea159fcd886c"
   },
   {
     "name": "newapi",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "author": "cph",
     "label": {
       "en": "New API",
       "zh": "New API"
     },
-    "published_at": "2026-09-22",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.1/newapi-0.1.1.cphplugin",
-    "sha256": "8d756770e42261dfadb1312220a331f40ba5b737af35910d0e0276bc5b5c5586"
+    "published_at": "2026-09-23",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.2/newapi-0.1.2.cphplugin",
+    "sha256": "29f1f88ebf31f1ab4e05224f75adc921015c4d58c857b5e8cfae1a23a05ae484"
   },
   {
     "name": "opencode",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "author": "cph",
     "label": {
       "en": "OpenCode",
       "zh": "OpenCode"
     },
-    "published_at": "2026-09-22",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/opencode-v0.1.1/opencode-0.1.1.cphplugin",
-    "sha256": "0c3da3efb26246f65ffe72dc95b77463213a45876e4b380fd567dc957e85fb42"
+    "published_at": "2026-09-23",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/opencode-v0.1.2/opencode-0.1.2.cphplugin",
+    "sha256": "934b95921b48a0c84ceb43634de63d75d0742f4052bd5b078f3a8f0a65fd0ff0"
   },
   {
     "name": "workbuddy",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "author": "cph",
     "label": {
       "en": "WorkBuddy",
       "zh": "WorkBuddy"
     },
-    "published_at": "2026-09-22",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.4/workbuddy-0.1.4.cphplugin",
-    "sha256": "17e3a8291ada5ac4ccbcbd728106a67e2bca709887e91a33371cfed0a3ceda68"
+    "published_at": "2026-09-23",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.5/workbuddy-0.1.5.cphplugin",
+    "sha256": "15e2e469c923ecd538317d7ee0e1480c42f13fa44ec2d6539cc498af19aa7fa9"
   }
 ]
