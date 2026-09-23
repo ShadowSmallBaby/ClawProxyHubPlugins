@@ -12,16 +12,28 @@
     "sha256": "6217173467f85b2be54282ea7f64cd39e1c75ab72b03541a9d152920fe8e87a1"
   },
   {
-    "name": "ima",
+    "name": "commandcode",
     "version": "0.1.0",
+    "author": "cph",
+    "label": {
+      "en": "Command Code",
+      "zh": "Command Code"
+    },
+    "published_at": "2026-09-23",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/commandcode-v0.1.0/commandcode-0.1.0.cphplugin",
+    "sha256": "e8ba91c3f1eda84e2f41b9e4a39340d01c2704135b2096fbbe6a25ab8e7eac9c"
+  },
+  {
+    "name": "ima",
+    "version": "0.1.1",
     "author": "cph",
     "label": {
       "en": "ima",
       "zh": "ima"
     },
     "published_at": "2026-09-23",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/ima-v0.1.0/ima-0.1.0.cphplugin",
-    "sha256": "43d441343f4ccba5dee7dc8f18dce355a1102f28fc16f63426b293b76d233e50"
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/ima-v0.1.1/ima-0.1.1.cphplugin",
+    "sha256": "e53abb56ea345b1927c5620d9baddcf6578b82486753be848a536716e48b24b0"
   },
   {
     "name": "lobsterai",
