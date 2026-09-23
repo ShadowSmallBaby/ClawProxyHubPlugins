@@ -1,5 +1,6 @@
-// ima 微信扫码登录：qrconnect 拉二维码 + 长轮询状态 + code 换 ima 凭证（照 ima2api qrCreateSession/qrPollSession）。
+// ima 微信扫码登录：qrconnect 拉二维码 + 长轮询状态 + code 换 ima 凭证。
 // 全链路插件侧 HTTP 完成，不依赖浏览器跨源。
+// credential / credFrom 凭据 blob 也在此层（与其它插件 auth 层惯例一致）。
 package main
 
 import (
@@ -28,6 +29,33 @@ const (
 	wxQRCodeURL    = "https://open.weixin.qq.com/connect/qrcode/"          // + uuid 取二维码图片
 	wxQRPollURL    = "https://long.open.weixin.qq.com/connect/l/qrconnect" // 长轮询扫码状态
 )
+
+// ---------- 凭据 blob ----------
+
+// credential ima 凭据：x-ima-cookie 完整值 + 长期刷新票据。
+type credential struct {
+	Cookie       string `json:"cookie"`                  // x-ima-cookie 完整值
+	RefreshToken string `json:"refresh_token,omitempty"` // 长期刷新票据（不轮换）
+	Name         string `json:"name,omitempty"`
+
+	proxyURL string `json:"-"`
+}
+
+// credFrom 凭据 + 代理配置一起解析。
+func credFrom(blob *pb.CredentialBlob) (*credential, error) {
+	c := &credential{}
+	if blob == nil || len(blob.GetBlob()) == 0 {
+		return nil, fmt.Errorf("缺少 ima 凭据，请先登录")
+	}
+	if err := json.Unmarshal(blob.GetBlob(), c); err != nil {
+		return nil, fmt.Errorf("凭据解析失败: %w", err)
+	}
+	if c.Cookie == "" {
+		return nil, fmt.Errorf("凭据缺少 cookie")
+	}
+	c.proxyURL = shared.ProxyURL(blob.GetProxy())
+	return c, nil
+}
 
 // wxGet 简单 GET（微信 qrconnect 链路，返回原始字节）。
 func wxGet(ctx context.Context, rawURL string, timeout time.Duration) ([]byte, error) {

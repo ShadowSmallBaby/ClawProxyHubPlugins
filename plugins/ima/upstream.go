@@ -1,4 +1,4 @@
-// ima 上游协议：init_session / qa SSE / refresh 请求构建 + Cookie 工具（照 ima2api）。
+// ima 上游协议：init_session / qa SSE / refresh 请求构建 + Cookie 工具。
 package main
 
 import (
@@ -31,8 +31,6 @@ const (
 	// 实测单此字段即让全部模型（含 glm-5.3 / hy4 等最新）通过；缺失或改用 IMA-IUA（App 形态）
 	// 则新模型回 1411「模型失效」。官方 Web 升级后如失效可经设置 web_version 更新。
 	defaultWebVersion = "5.13.6"
-	// MAX_QUESTION IMA question 字段限制 10240 字符，留余量
-	MAX_QUESTION = 10000
 )
 
 var proxyClients sync.Map // proxyURL → *http.Client
