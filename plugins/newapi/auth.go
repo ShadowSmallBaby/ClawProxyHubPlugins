@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
 // sessionAuth 站点会话：旧版 New API 下发 session cookie，新版登录直接返回短期 JWT（Bearer）；两者都要 New-Api-User。
@@ -52,10 +53,10 @@ func (p *plugin) callJSON(ctx context.Context, cred *credential, site *siteConfi
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	var env apiEnvelope
 	if err := json.Unmarshal(raw, &env); err != nil {
-		return nil, resp, fmt.Errorf("upstream non-json (HTTP %d): %s", resp.StatusCode, truncate(string(raw), 200))
+		return nil, resp, fmt.Errorf("upstream non-json (HTTP %d): %s", resp.StatusCode, shared.Truncate(string(raw), 200))
 	}
 	if !env.Success {
-		return nil, resp, &apiError{message: orDefault(env.Message, fmt.Sprintf("HTTP %d", resp.StatusCode))}
+		return nil, resp, &apiError{message: shared.OrDefault(env.Message, fmt.Sprintf("HTTP %d", resp.StatusCode))}
 	}
 	return env.Data, resp, nil
 }
@@ -107,7 +108,7 @@ func parseCredFile(raw string) (*sessionAuth, error) {
 		if json.Unmarshal([]byte(raw), &f) != nil {
 			return nil, fmt.Errorf("凭据文件不是合法 JSON")
 		}
-		auth.cookie = orDefault(f.Session, cookieValue(f.Cookie, "session"))
+		auth.cookie = shared.OrDefault(f.Session, cookieValue(f.Cookie, "session"))
 		auth.bearer = f.AccessToken
 		auth.userID = int(rawNumber(f.UserID))
 	} else {
@@ -160,7 +161,7 @@ func (p *plugin) bootstrapFromSession(ctx context.Context, site *siteConfig, aut
 				AccessToken string `json:"access_token"`
 			}
 			_ = json.Unmarshal(data, &obj)
-			token = orDefault(obj.Token, obj.AccessToken)
+			token = shared.OrDefault(obj.Token, obj.AccessToken)
 		}
 		cred.AccessToken = token
 	}
@@ -185,7 +186,7 @@ func (p *plugin) pickOrCreateAPIKey(ctx context.Context, cred *credential, site 
 		return "", fmt.Errorf("密钥「%s」存在但取不到明文（已禁用或站点不返回明文），请在站点上检查或换一把", name)
 	}
 	_, _, err := p.callJSON(ctx, cred, site, "POST", "/api/token/", managementHeaders(cred, site), map[string]interface{}{
-		"name": orDefault(name, "cph"), "remain_quota": 0, "expired_time": -1, "unlimited_quota": true,
+		"name": shared.OrDefault(name, "cph"), "remain_quota": 0, "expired_time": -1, "unlimited_quota": true,
 		"model_limits_enabled": false, "model_limits": "", "group": "",
 	})
 	if err != nil {

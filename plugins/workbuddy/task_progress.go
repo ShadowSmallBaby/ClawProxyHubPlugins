@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
 const (
@@ -48,7 +50,7 @@ func remaining(t growthTask) int {
 func (p *plugin) simulateChat(ctx context.Context, cred *credential, o simulateChatOpts) error {
 	p.ensureIdentity() // 事件公共字段里的版本号要用当前设置
 	ids := newConversation()
-	o.agentType = orDefault(o.agentType, "main")
+	o.agentType = shared.OrDefault(o.agentType, "main")
 	co := chatEventOpts{model: defaultModel, modelName: defaultModelName, agentType: o.agentType}
 	if o.template != nil {
 		co.mode = mapStr(o.template, "mode")
@@ -65,10 +67,10 @@ func (p *plugin) simulateChat(ctx context.Context, cred *credential, o simulateC
 		skillNames = append(skillNames, mapStr(s, "name"))
 	}
 	events := append([]map[string]interface{}{}, o.preEvents...)
-	events = append(events, taskCreatedEvent(cred, ids, co, orDefault(o.taskMode, taskModeWorking), o.template, o.expert, skillNames))
+	events = append(events, taskCreatedEvent(cred, ids, co, shared.OrDefault(o.taskMode, taskModeWorking), o.template, o.expert, skillNames))
 	if o.template != nil {
 		events = append(events, taskCreatedWithTemplateEvent(cred, ids, o.template))
-		events = append(events, templateUsedEvent(cred, o.template, orDefault(o.taskMode, taskModeWorking)))
+		events = append(events, templateUsedEvent(cred, o.template, shared.OrDefault(o.taskMode, taskModeWorking)))
 	}
 	if o.expert != nil {
 		events = append(events, expertActualUseEvent(cred, ids, o.expert))
@@ -239,7 +241,7 @@ func (p *plugin) advanceTask(ctx context.Context, cred *credential, t growthTask
 		}
 		return 1, nil
 	}
-	return 0, fmt.Errorf("任务「%s」没有已知的埋点链路（需在客户端真实操作）", orDefault(t.Title, t.Code))
+	return 0, fmt.Errorf("任务「%s」没有已知的埋点链路（需在客户端真实操作）", shared.OrDefault(t.Title, t.Code))
 }
 
 // expertRounds 召唤专家并各对话一轮（专家召唤事件作为前置）。

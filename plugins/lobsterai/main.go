@@ -3,11 +3,8 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -93,20 +92,8 @@ func credFrom(blob *pb.CredentialBlob) (*credential, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.proxyURL = proxyURL(blob.GetProxy())
+	c.proxyURL = shared.ProxyURL(blob.GetProxy())
 	return c, nil
-}
-
-// proxyURL 代理配置 → URL 字符串。
-func proxyURL(p *pb.ProxyConfig) string {
-	if p == nil || p.GetHost() == "" {
-		return ""
-	}
-	u := &url.URL{Scheme: orDefault(p.GetScheme(), "http"), Host: fmt.Sprintf("%s:%d", p.GetHost(), p.GetPort())}
-	if p.GetUsername() != "" {
-		u.User = url.UserPassword(p.GetUsername(), p.GetPassword())
-	}
-	return u.String()
 }
 
 var proxyClients sync.Map // proxyURL → *http.Client
@@ -114,35 +101,18 @@ var proxyClients sync.Map // proxyURL → *http.Client
 // hc 凭据对应的 HTTP client（无代理 = 默认直连）。
 func (p *plugin) hc(cred *credential) *http.Client {
 	if cred == nil || cred.proxyURL == "" {
-		return upstreamClient("")
+		return shared.UpstreamClient("")
 	}
 	if c, ok := proxyClients.Load(cred.proxyURL); ok {
 		return c.(*http.Client)
 	}
 	u, err := url.Parse(cred.proxyURL)
 	if err != nil {
-		return upstreamClient("")
+		return shared.UpstreamClient("")
 	}
-	c := upstreamClient(u.String())
+	c := shared.UpstreamClient(u.String())
 	proxyClients.Store(cred.proxyURL, c)
 	return c
-}
-
-// upstreamClient 上游 HTTP client：连接 15s / TLS 15s / 首字节 60s，
-// 流式对话整体不设超时（长回复合法）。
-func upstreamClient(proxyURL string) *http.Client {
-	transport := &http.Transport{
-		DialContext:           (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 60 * time.Second,
-		IdleConnTimeout:       90 * time.Second,
-	}
-	if proxyURL != "" {
-		if u, err := url.Parse(proxyURL); err == nil {
-			transport.Proxy = http.ProxyURL(u)
-		}
-	}
-	return &http.Client{Transport: transport}
 }
 
 func parseCred(blob []byte) (*credential, error) {
@@ -153,7 +123,7 @@ func parseCred(blob []byte) (*credential, error) {
 	// .auth 文件完整结构：token/user 在嵌套字段里
 	if c.AccessToken == "" && c.AuthTokens != nil {
 		c.AccessToken = c.AuthTokens.AccessToken
-		c.RefreshToken = orDefault(c.RefreshToken, c.AuthTokens.RefreshToken)
+		c.RefreshToken = shared.OrDefault(c.RefreshToken, c.AuthTokens.RefreshToken)
 		if c.ExpiresAt == 0 {
 			c.ExpiresAt = c.AuthTokens.ExpiresAt
 		}
@@ -326,7 +296,7 @@ func postJSON(ctx context.Context, client *http.Client, url string, headers map[
 		req.Header.Set(k, v)
 	}
 	if client == nil {
-		client = upstreamClient("")
+		client = shared.UpstreamClient("")
 	}
 	return client.Do(req)
 }
@@ -399,7 +369,7 @@ func (p *plugin) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResu
 func (p *plugin) loginOAuth(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResult, error) {
 	if len(req.State) == 0 {
 		// 第一步：起本地回调 server + 生成登录链接
-		state := randHex(16)
+		state := shared.RandHex(16)
 		cb := startCallbackServer(state, func(code string) {
 			go p.completeOAuth(state, code) // 回调到达：异步兑换，成功即关停监听
 		})
@@ -542,7 +512,7 @@ func (p *plugin) finishOAuth(state string) {
 
 // exchangeCred 用授权码换凭据；fail 非 nil 表示兑换失败（已含错误信息）。
 func (p *plugin) exchangeCred(ctx context.Context, code string) (*credential, *pb.LoginResult) {
-	cred := &credential{InstallationUUID: newUUID()}
+	cred := &credential{InstallationUUID: shared.RandUUID()}
 	exchangeBody := withKeyfrom(map[string]interface{}{"authCode": code}, cred, p.clientVersion())
 	resp, err := postJSON(ctx, nil, serverBase+pathExchange, map[string]string{"Content-Type": "application/json"}, exchangeBody)
 	if err != nil {
@@ -940,7 +910,7 @@ func (p *plugin) fetchQuotaSummary(ctx context.Context, cred *credential) *quota
 		}
 		s.Packages = append(s.Packages, map[string]string{
 			"remaining": trimFloat(it.CreditsRemaining),
-			"label":     orDefault(it.Label, orDefault(it.Type, "积分包")),
+			"label":     shared.OrDefault(it.Label, shared.OrDefault(it.Type, "积分包")),
 			"expiresAt": expiry,
 		})
 	}
@@ -1065,7 +1035,7 @@ func (p *plugin) ListModels(ctx context.Context, credBlob *pb.CredentialBlob) (*
 		isAnthropic := m.APIFormat == "anthropic"
 		anthropicModels.Store(m.ModelID, isAnthropic) // Chat 直通判定缓存
 		models = append(models, &pb.ModelInfo{
-			Id: m.ModelID, Label: map[string]string{"en": orDefault(m.ModelName, m.ModelID)},
+			Id: m.ModelID, Label: map[string]string{"en": shared.OrDefault(m.ModelName, m.ModelID)},
 			SupportsTools: !isAnthropic, SupportsStream: true,
 		})
 	}
@@ -1081,7 +1051,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	ctx := stream.Context()
 	cred, err := credFrom(req.GetCredential())
 	if err != nil {
-		return stream.Send(failed(401, orHint(err)))
+		return stream.Send(shared.Failed(401, orHint(err)))
 	}
 
 	// apiFormat=anthropic 的模型直通 /v1/messages，其余转 openai 方言
@@ -1090,11 +1060,11 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	}
 
 	body := openaiup.ChatBody(req)
-	body["model"] = orDefault(req.Model, "auto")
+	body["model"] = shared.OrDefault(req.Model, "auto")
 
 	resp, err := postJSON(ctx, p.hc(cred), serverBase+proxyPrefix+"/v1/chat/completions", p.authHeaders(cred), body)
 	if err != nil {
-		return stream.Send(failed(502, err.Error()))
+		return stream.Send(shared.Failed(502, err.Error()))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -1103,7 +1073,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		if resp.StatusCode == 401 {
 			code = 401
 		}
-		return stream.Send(failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncate(string(raw), 300))))
+		return stream.Send(shared.Failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 300))))
 	}
 
 	if err := stream.Send(&pb.StreamEvent{Event: &pb.StreamEvent_MessageStart{
@@ -1113,7 +1083,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	}
 
 	parser := openaiup.NewParser(func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
-	return scanSSE(resp.Body, parser, stream)
+	return shared.ScanSSE(resp.Body, parser)
 }
 
 // chatAnthropic anthropic 方言直通：POST /api/proxy/v1/messages。
@@ -1123,7 +1093,7 @@ func (p *plugin) chatAnthropic(req *pb.ChatRequest, stream pb.ClawPlugin_ChatSer
 
 	resp, err := postJSON(ctx, p.hc(cred), serverBase+proxyPrefix+"/v1/messages", p.authHeaders(cred), body)
 	if err != nil {
-		return stream.Send(failed(502, err.Error()))
+		return stream.Send(shared.Failed(502, err.Error()))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -1132,38 +1102,10 @@ func (p *plugin) chatAnthropic(req *pb.ChatRequest, stream pb.ClawPlugin_ChatSer
 		if resp.StatusCode == 401 {
 			code = 401
 		}
-		return stream.Send(failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncate(string(raw), 300))))
+		return stream.Send(shared.Failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 300))))
 	}
 	parser := anthropicup.NewParser(func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
-	return scanSSE(resp.Body, parser, stream)
-}
-
-// scanSSE 通用 SSE 扫描：空流兜底 + 结束收尾。
-func scanSSE(body io.Reader, parser interface {
-	Feed(string)
-	Finish()
-	FinishWithError(int32, string)
-}, stream pb.ClawPlugin_ChatServer) error {
-	scanner := bufio.NewScanner(body)
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-	sawEvent := false
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "data:") && !strings.Contains(line, "[DONE]") {
-			sawEvent = true
-		}
-		parser.Feed(line)
-	}
-	if err := scanner.Err(); err != nil {
-		parser.FinishWithError(502, "upstream stream broken: "+err.Error())
-		return nil
-	}
-	if !sawEvent {
-		parser.FinishWithError(502, "upstream returned an empty stream")
-		return nil
-	}
-	parser.Finish()
-	return nil
+	return shared.ScanSSE(resp.Body, parser)
 }
 
 // isAnthropicModel 查模型方言（缓存 miss 时拉一次目录）。
@@ -1297,7 +1239,7 @@ func (p *plugin) RunTask(ctx context.Context, req *pb.RunTaskRequest) (*pb.RunTa
 	actionURL := fmt.Sprintf("%s/api/client-activities/%s/actions/check_in", serverBase, code)
 	actionBody := map[string]interface{}{
 		"configRevision": revision,
-		"idempotencyKey": newUUID(),
+		"idempotencyKey": shared.RandUUID(),
 		"payload":        map[string]interface{}{},
 	}
 	resp3, err := postJSON(ctx, p.hc(cred), actionURL, p.authHeaders(cred), actionBody)
@@ -1335,7 +1277,7 @@ func (p *plugin) RunTask(ctx context.Context, req *pb.RunTaskRequest) (*pb.RunTa
 func resolveLoginURL(ctx context.Context) (string, error) {
 	req, _ := http.NewRequestWithContext(ctx, "GET", overmindLogin, nil)
 	req.Header.Set("Accept", "application/json")
-	resp, err := upstreamClient("").Do(req)
+	resp, err := shared.UpstreamClient("").Do(req)
 	if err == nil {
 		defer resp.Body.Close()
 		var body struct {
@@ -1411,40 +1353,6 @@ func withKeyfrom(body map[string]interface{}, cred *credential, version string) 
 		body[k] = v
 	}
 	return body
-}
-
-func failed(code int32, msg string) *pb.StreamEvent {
-	return &pb.StreamEvent{Event: &pb.StreamEvent_TaskFailed{
-		TaskFailed: &pb.TaskFailed{Error: &pb.Error{Code: code, Message: msg}},
-	}}
-}
-
-func randHex(n int) string {
-	b := make([]byte, n)
-	rand.Read(b)
-	return hex.EncodeToString(b)
-}
-
-func newUUID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	b[6] = (b[6] & 0x0f) | 0x40
-	b[8] = (b[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
-}
-
-func orDefault(s, def string) string {
-	if s == "" {
-		return def
-	}
-	return s
 }
 
 // proxyPB credential 里的代理回填为 PB 配置（isAnthropicModel 拉目录时透传）。

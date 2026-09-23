@@ -6,19 +6,18 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -152,7 +151,7 @@ func credFrom(blob *pb.CredentialBlob) (*credential, error) {
 		return nil, err
 	}
 	if pr := blob.GetProxy(); pr != nil && pr.GetHost() != "" {
-		u := &url.URL{Scheme: orDefault(pr.GetScheme(), "http"), Host: fmt.Sprintf("%s:%d", pr.GetHost(), pr.GetPort())}
+		u := &url.URL{Scheme: shared.OrDefault(pr.GetScheme(), "http"), Host: fmt.Sprintf("%s:%d", pr.GetHost(), pr.GetPort())}
 		if pr.GetUsername() != "" {
 			u.User = url.UserPassword(pr.GetUsername(), pr.GetPassword())
 		}
@@ -166,35 +165,18 @@ var proxyClients sync.Map // proxyURL → *http.Client
 // hc 凭据对应的 HTTP client（无代理 = 默认直连）。
 func (p *plugin) hc(cred *credential) *http.Client {
 	if cred == nil || cred.proxyURL == "" {
-		return upstreamClient("")
+		return shared.UpstreamClient("")
 	}
 	if c, ok := proxyClients.Load(cred.proxyURL); ok {
 		return c.(*http.Client)
 	}
 	u, err := url.Parse(cred.proxyURL)
 	if err != nil {
-		return upstreamClient("")
+		return shared.UpstreamClient("")
 	}
-	c := upstreamClient(u.String())
+	c := shared.UpstreamClient(u.String())
 	proxyClients.Store(cred.proxyURL, c)
 	return c
-}
-
-// upstreamClient 上游 HTTP client：连接 15s / TLS 15s / 首字节 60s，
-// 流式对话整体不设超时（长回复合法）。
-func upstreamClient(proxyURL string) *http.Client {
-	transport := &http.Transport{
-		DialContext:           (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 60 * time.Second,
-		IdleConnTimeout:       90 * time.Second,
-	}
-	if proxyURL != "" {
-		if u, err := url.Parse(proxyURL); err == nil {
-			transport.Proxy = http.ProxyURL(u)
-		}
-	}
-	return &http.Client{Transport: transport}
 }
 
 func parseCred(blob []byte) (*credential, error) {
@@ -254,7 +236,7 @@ func postJSON(ctx context.Context, client *http.Client, url string, headers map[
 		req.Header.Set(k, v)
 	}
 	if client == nil {
-		client = upstreamClient("")
+		client = shared.UpstreamClient("")
 	}
 	return client.Do(req)
 }
@@ -352,7 +334,7 @@ func (p *plugin) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResu
 		return &pb.LoginResult{
 			Blob: blob,
 			Profile: &pb.AccountProfile{
-				DisplayName: orDefault(cred.Account.Nickname, orDefault(cred.Account.UID, "workbuddy-account")),
+				DisplayName: shared.OrDefault(cred.Account.Nickname, shared.OrDefault(cred.Account.UID, "workbuddy-account")),
 				Healthy:     true, Quota: map[string]string{},
 			},
 		}, nil
@@ -406,7 +388,7 @@ func (p *plugin) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResu
 		return &pb.LoginResult{
 			Blob: blob,
 			Profile: &pb.AccountProfile{
-				DisplayName: orDefault(cred.Account.Nickname, phone), Healthy: true, Quota: map[string]string{},
+				DisplayName: shared.OrDefault(cred.Account.Nickname, phone), Healthy: true, Quota: map[string]string{},
 			},
 		}, nil
 	case "oauth":
@@ -438,7 +420,7 @@ func (p *plugin) loginBrowserAuth(ctx context.Context, req *pb.LoginRequest) (*p
 		}
 
 		// 上游 state 留在插件内存；回传前端的是我们签发的随机 state
-		localState := randHex(16)
+		localState := shared.RandHex(16)
 		p.mu.Lock()
 		if p.authState == nil {
 			p.authState = map[string]string{}
@@ -494,7 +476,7 @@ func (p *plugin) loginBrowserAuth(ctx context.Context, req *pb.LoginRequest) (*p
 	cred.Auth.AccessToken = grant.AccessToken
 	cred.Auth.RefreshToken = grant.RefreshToken
 	cred.Auth.ExpiresAt = grant.ReceivedAtMs + grant.ExpiresIn*1000
-	cred.Auth.Domain = orDefault(grant.Domain, "www.codebuddy.cn")
+	cred.Auth.Domain = shared.OrDefault(grant.Domain, "www.codebuddy.cn")
 	cred.Account.UID = acct["uid"]
 	cred.Account.Nickname = acct["nickname"]
 	cred.Account.EnterpriseID = acct["enterpriseId"]
@@ -503,7 +485,7 @@ func (p *plugin) loginBrowserAuth(ctx context.Context, req *pb.LoginRequest) (*p
 	return &pb.LoginResult{
 		Blob: blob,
 		Profile: &pb.AccountProfile{
-			DisplayName: orDefault(cred.Account.Nickname, orDefault(cred.Account.UID, "workbuddy-account")),
+			DisplayName: shared.OrDefault(cred.Account.Nickname, shared.OrDefault(cred.Account.UID, "workbuddy-account")),
 			Healthy:     true, Quota: map[string]string{},
 		},
 	}, nil
@@ -526,7 +508,7 @@ func (p *plugin) pollToken(ctx context.Context, upstreamState string) (*tokenGra
 	for k, v := range browserAuthHeaders("") {
 		req.Header.Set(k, v)
 	}
-	resp, err := upstreamClient("").Do(req)
+	resp, err := shared.UpstreamClient("").Do(req)
 	if err != nil {
 		return nil, false, err
 	}
@@ -569,7 +551,7 @@ func (p *plugin) fetchAuthAccount(ctx context.Context, upstreamState, accessToke
 	for k, v := range browserAuthHeaders(accessToken) {
 		req.Header.Set(k, v)
 	}
-	resp, err := upstreamClient("").Do(req)
+	resp, err := shared.UpstreamClient("").Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -600,7 +582,7 @@ func browserAuthHeaders(accessToken string) map[string]string {
 		"X-Product":    "SaaS",
 		"X-IDE-Type":   "WorkBuddy",
 		"X-IDE-Name":   "WorkBuddy",
-		"X-Request-ID": randHex(16),
+		"X-Request-ID": shared.RandHex(16),
 	}
 	if accessToken != "" {
 		h["Authorization"] = "Bearer " + accessToken
@@ -619,7 +601,7 @@ func withLoginParams(authURL string) string {
 		q.Set("version", "5.5.4")
 	}
 	if q.Get("loginSessionId") == "" {
-		q.Set("loginSessionId", newUUID())
+		q.Set("loginSessionId", shared.RandUUID())
 	}
 	u.RawQuery = q.Encode()
 	return u.String()
@@ -666,7 +648,7 @@ func (p *plugin) loginWithSMS(ctx context.Context, phone, code string) (string, 
 	if err := json.Unmarshal(data, &tok); err != nil {
 		return "", "", err
 	}
-	at, rt := orDefault(tok.AccessToken, tok.Access_token), orDefault(tok.RefreshToken, tok.Refresh_token)
+	at, rt := shared.OrDefault(tok.AccessToken, tok.Access_token), shared.OrDefault(tok.RefreshToken, tok.Refresh_token)
 	if at == "" || rt == "" {
 		return "", "", fmt.Errorf("响应缺少 accessToken/refreshToken")
 	}
@@ -745,7 +727,7 @@ func (p *plugin) Refresh(ctx context.Context, credBlob *pb.CredentialBlob) (*pb.
 	}
 	blob, _ := json.Marshal(cred)
 	profile := &pb.AccountProfile{
-		DisplayName: orDefault(cred.Account.Nickname, cred.Account.UID), Healthy: true, Quota: map[string]string{},
+		DisplayName: shared.OrDefault(cred.Account.Nickname, cred.Account.UID), Healthy: true, Quota: map[string]string{},
 	}
 	// 刷新成功后顺带拉积分与动态块（与 GetProfile 同一套组装），避免快照缺块
 	if credits := p.fetchCredits(ctx, cred); credits != "" {
@@ -795,7 +777,7 @@ func (p *plugin) GetProfile(ctx context.Context, credBlob *pb.CredentialBlob) (*
 		return nil, err
 	}
 	profile := &pb.AccountProfile{
-		DisplayName: orDefault(cred.Account.Nickname, cred.Account.UID), Healthy: true, Quota: map[string]string{},
+		DisplayName: shared.OrDefault(cred.Account.Nickname, cred.Account.UID), Healthy: true, Quota: map[string]string{},
 	}
 	credits := p.fetchCredits(ctx, cred)
 	if credits != "" {
@@ -837,7 +819,7 @@ func (p *plugin) growthSection(ctx context.Context, cred *credential) *pb.Profil
 			progress = fmt.Sprintf("%d / %d", t.Progress.Current, t.Progress.Target)
 		}
 		sec.Items = append(sec.Items, &pb.SectionRow{Cells: map[string]string{
-			"title":    orDefault(t.Title, t.Code),
+			"title":    shared.OrDefault(t.Title, t.Code),
 			"status":   "status:" + growthAcceptStatus(t.AcceptStatus),
 			"progress": progress,
 			"reward":   rewardText(t),
@@ -1276,16 +1258,16 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	ctx := stream.Context()
 	cred, err := credFrom(req.GetCredential())
 	if err != nil {
-		return stream.Send(failed(401, orHint(err)))
+		return stream.Send(shared.Failed(401, orHint(err)))
 	}
 
 	body := openaiup.ChatBody(req)
-	body["model"] = orDefault(req.Model, "auto")
+	body["model"] = shared.OrDefault(req.Model, "auto")
 	desensitizeMessageBody(body) // system 净化：客户端特征改写 + 合规声明脱敏
 
 	resp, err := postJSON(ctx, p.hc(cred), upstreamBase+pathChat, p.headers(cred, true), body)
 	if err != nil {
-		return stream.Send(failed(502, err.Error()))
+		return stream.Send(shared.Failed(502, err.Error()))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -1294,7 +1276,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		if resp.StatusCode == 401 {
 			code = 401
 		}
-		return stream.Send(failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncate(string(raw), 300))))
+		return stream.Send(shared.Failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 300))))
 	}
 
 	if err := stream.Send(&pb.StreamEvent{Event: &pb.StreamEvent_MessageStart{
@@ -1420,45 +1402,11 @@ func (p *plugin) runCheckin(ctx context.Context, cred *credential) (*pb.RunTaskR
 
 // ---------- 工具 ----------
 
-func failed(code int32, msg string) *pb.StreamEvent {
-	return &pb.StreamEvent{Event: &pb.StreamEvent_TaskFailed{
-		TaskFailed: &pb.TaskFailed{Error: &pb.Error{Code: code, Message: msg}},
-	}}
-}
-
 func nowMillis() int64 { return time.Now().UnixMilli() }
-
-func orDefault(s, def string) string {
-	if s == "" {
-		return def
-	}
-	return s
-}
 
 // trimFloat 浮点转不丢精度的十进制字符串（整数不带小数点）。
 func trimFloat(f float64) string {
 	return strconv.FormatFloat(f, 'f', -1, 64)
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
-}
-
-func randHex(n int) string {
-	b := make([]byte, n)
-	rand.Read(b)
-	return hex.EncodeToString(b)
-}
-
-func newUUID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	b[6] = (b[6] & 0x0f) | 0x40
-	b[8] = (b[8] & 0x3f) | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
 
 // orHint 凭据解析失败时附上排查方向。

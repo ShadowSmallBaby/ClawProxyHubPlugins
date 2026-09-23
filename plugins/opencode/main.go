@@ -10,9 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -23,6 +21,7 @@ import (
 	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/openaiup"
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
 	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/responsesup"
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
 const (
@@ -114,20 +113,8 @@ func credFrom(blob *pb.CredentialBlob) (*credential, error) {
 	if c.Tier != "zen" && c.Tier != "go" {
 		c.Tier = "zen"
 	}
-	c.proxyURL = proxyURL(blob.GetProxy())
+	c.proxyURL = shared.ProxyURL(blob.GetProxy())
 	return c, nil
-}
-
-// proxyURL 代理配置 → URL 字符串。
-func proxyURL(p *pb.ProxyConfig) string {
-	if p == nil || p.GetHost() == "" {
-		return ""
-	}
-	u := &url.URL{Scheme: orDefault(p.GetScheme(), "http"), Host: fmt.Sprintf("%s:%d", p.GetHost(), p.GetPort())}
-	if p.GetUsername() != "" {
-		u.User = url.UserPassword(p.GetUsername(), p.GetPassword())
-	}
-	return u.String()
 }
 
 var proxyClients sync.Map // proxyURL → *http.Client
@@ -141,25 +128,9 @@ func (p *plugin) hc(cred *credential) *http.Client {
 	if c, ok := proxyClients.Load(key); ok {
 		return c.(*http.Client)
 	}
-	c := upstreamClient(key)
+	c := shared.UpstreamClient(key)
 	proxyClients.Store(key, c)
 	return c
-}
-
-// upstreamClient 连接 15s / TLS 15s / 首字节 60s，流式对话整体不设超时（长回复合法）。
-func upstreamClient(proxyURL string) *http.Client {
-	transport := &http.Transport{
-		DialContext:           (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 60 * time.Second,
-		IdleConnTimeout:       90 * time.Second,
-	}
-	if proxyURL != "" {
-		if u, err := url.Parse(proxyURL); err == nil {
-			transport.Proxy = http.ProxyURL(u)
-		}
-	}
-	return &http.Client{Transport: transport}
 }
 
 // ---------- Manifest / 登录 ----------
@@ -414,7 +385,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	ctx := stream.Context()
 	cred, err := credFrom(req.GetCredential())
 	if err != nil {
-		return stream.Send(failed(401, err.Error()))
+		return stream.Send(shared.Failed(401, err.Error()))
 	}
 	p.refreshCatalog(ctx)
 
@@ -425,7 +396,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		resp, err = p.chatOnce(ctx, cred, *route.fallback, req)
 	}
 	if err != nil {
-		return stream.Send(failed(502, err.Error()))
+		return stream.Send(shared.Failed(502, err.Error()))
 	}
 	defer resp.Body.Close()
 
@@ -438,7 +409,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		case resp.StatusCode == 429:
 			code = 429
 		}
-		return stream.Send(failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncate(string(errBody), 300))))
+		return stream.Send(shared.Failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(errBody), 300))))
 	}
 
 	if err := stream.Send(&pb.StreamEvent{Event: &pb.StreamEvent_MessageStart{
@@ -461,7 +432,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	default:
 		parser = openaiup.NewParser(func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
 	}
-	return scanSSE(resp.Body, parser)
+	return shared.ScanSSE(resp.Body, parser)
 }
 
 // chatOnce 组请求体 + 发上游（按模型原生协议选请求体与端点；cred 决定出站代理）。
@@ -568,64 +539,10 @@ func placeholderTool(name, protocol string) map[string]interface{} {
 	}
 }
 
-func scanSSE(body io.Reader, parser interface {
-	Feed(string)
-	Finish()
-	FinishWithError(int32, string)
-}) error {
-	scanner := bufioScanner(body)
-	_ = scanner
-	var pending string
-	sawEvent := false
-	tmp := make([]byte, 64*1024)
-	for {
-		n, err := body.Read(tmp)
-		if n > 0 {
-			scanned := pending + string(tmp[:n])
-			pending = ""
-			for {
-				i := strings.IndexByte(scanned, '\n')
-				if i < 0 {
-					break
-				}
-				line := strings.TrimSuffix(scanned[:i], "\r")
-				scanned = scanned[i+1:]
-				if strings.HasPrefix(line, "data:") && !strings.Contains(line, "[DONE]") {
-					sawEvent = true
-				}
-				parser.Feed(line)
-			}
-			pending = scanned
-		}
-		if err != nil {
-			if len(pending) > 0 {
-				parser.Feed(pending)
-			}
-			if err != io.EOF {
-				parser.FinishWithError(502, "upstream stream broken: "+err.Error())
-				return nil
-			}
-			break
-		}
-	}
-	if !sawEvent {
-		parser.FinishWithError(502, "upstream returned an empty stream")
-		return nil
-	}
-	parser.Finish()
-	return nil
-}
-
 // bufioScanner 占位：Go 惯用 bufio.Scanner，这里统一走 Read 循环。
 func bufioScanner(io.Reader) struct{} { return struct{}{} }
 
 // ---------- 工具 ----------
-
-func failed(code int32, msg string) *pb.StreamEvent {
-	return &pb.StreamEvent{Event: &pb.StreamEvent_TaskFailed{
-		TaskFailed: &pb.TaskFailed{Error: &pb.Error{Code: code, Message: msg}},
-	}}
-}
 
 // idCounter 同毫秒内的单调计数（timestamp*0x1000+counter 的 id 生成算法）。
 var idCounter uint64
@@ -645,18 +562,4 @@ func opencodeID(prefix string, desc bool) string {
 		b[i] = chars[int(b[i])%62]
 	}
 	return prefix + "_" + timePart + string(b)
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
-}
-
-func orDefault(s, def string) string {
-	if s == "" {
-		return def
-	}
-	return s
 }

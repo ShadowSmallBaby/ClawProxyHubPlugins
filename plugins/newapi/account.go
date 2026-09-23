@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -109,7 +110,7 @@ func (p *plugin) fetchSelf(ctx context.Context, cred *credential, site *siteConf
 
 // fillProfile 余额折算美元写标准键 + credits_json；签到状态动态块（失败静默）。
 func (p *plugin) fillProfile(ctx context.Context, cred *credential, site *siteConfig, self *selfInfo, profile *pb.AccountProfile) {
-	name := orDefault(self.DisplayName, self.Username)
+	name := shared.OrDefault(self.DisplayName, self.Username)
 	if name != "" {
 		profile.DisplayName = name
 	}
@@ -230,10 +231,10 @@ func (p *plugin) fetchModels(ctx context.Context, cred *credential, site *siteCo
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if resp.StatusCode == 401 || resp.StatusCode == 403 {
-		return nil, &authError{msg: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncate(string(raw), 200))}
+		return nil, &authError{msg: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 200))}
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncate(string(raw), 200))
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 200))
 	}
 	var list struct {
 		Data []struct {
@@ -468,8 +469,8 @@ func (p *plugin) checkinByRefresh(ctx context.Context, cred *credential, site *s
 
 // checkinManualOnly 仅 API 密钥的账号无管理面凭据，无法自动签到：与「站点签到」同样只做摘要 + 站内提醒。
 func (p *plugin) checkinManualOnly(cred *credential, site *siteConfig) *pb.RunTaskResponse {
-	name := orDefault(site.InstanceName, site.BaseURL)
-	target := orDefault(site.CheckinURL, site.BaseURL)
+	name := shared.OrDefault(site.InstanceName, site.BaseURL)
+	target := shared.OrDefault(site.CheckinURL, site.BaseURL)
 	return &pb.RunTaskResponse{
 		Summary: "该账号仅配置了 API 密钥（无系统访问令牌 / 账号密码），无法自动签到，请前往站点手动签到：" + target,
 		Notification: &pb.TaskNotification{
@@ -482,8 +483,8 @@ func (p *plugin) checkinManualOnly(cred *credential, site *siteConfig) *pb.RunTa
 
 // checkinBySite 站点签到：无法自动完成，摘要提示地址 + 站内通知提醒。
 func (p *plugin) checkinBySite(req *pb.RunTaskRequest, site *siteConfig) *pb.RunTaskResponse {
-	target := orDefault(site.CheckinURL, "（实例未填写签到站地址）")
-	name := orDefault(site.InstanceName, site.BaseURL)
+	target := shared.OrDefault(site.CheckinURL, "（实例未填写签到站地址）")
+	name := shared.OrDefault(site.InstanceName, site.BaseURL)
 	return &pb.RunTaskResponse{
 		Summary: "站点签到需人工完成，请前往签到站签到：" + target,
 		Notification: &pb.TaskNotification{

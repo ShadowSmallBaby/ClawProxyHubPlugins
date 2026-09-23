@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
 const (
@@ -42,7 +44,7 @@ func (p *plugin) catalogListTemplates(ctx context.Context, cred *credential) ([]
 			continue
 		}
 		out = append(out, map[string]interface{}{
-			"id": fmt.Sprint(s.ID), "name": s.Name, "mode": orDefault(s.Mode, "working"),
+			"id": fmt.Sprint(s.ID), "name": s.Name, "mode": shared.OrDefault(s.Mode, "working"),
 		})
 	}
 	return out, nil
@@ -86,9 +88,9 @@ func (p *plugin) catalogListExperts(ctx context.Context, cred *credential, keywo
 			industry = e.Categories[0]
 		}
 		out = append(out, map[string]interface{}{
-			"id": fmt.Sprint(e.ExpertID), "name": orDefault(e.DisplayName, e.AgentName),
-			"title": e.Profession, "expertType": orDefault(e.ExpertType, expertTypeAgent),
-			"industryId": industry, "source": orDefault(e.Source, "openapi"), "version": e.Version,
+			"id": fmt.Sprint(e.ExpertID), "name": shared.OrDefault(e.DisplayName, e.AgentName),
+			"title": e.Profession, "expertType": shared.OrDefault(e.ExpertType, expertTypeAgent),
+			"industryId": industry, "source": shared.OrDefault(e.Source, "openapi"), "version": e.Version,
 		})
 	}
 	if expertType != "" {
@@ -131,9 +133,9 @@ func (p *plugin) catalogFindExpert(ctx context.Context, cred *credential, keywor
 		industry = e.Categories[0]
 	}
 	return map[string]interface{}{
-		"id": fmt.Sprint(e.ExpertID), "name": orDefault(e.DisplayName, e.AgentName),
-		"title": e.Profession, "expertType": orDefault(e.ExpertType, expertTypeAgent),
-		"industryId": industry, "source": orDefault(e.Source, "openapi"), "version": e.Version,
+		"id": fmt.Sprint(e.ExpertID), "name": shared.OrDefault(e.DisplayName, e.AgentName),
+		"title": e.Profession, "expertType": shared.OrDefault(e.ExpertType, expertTypeAgent),
+		"industryId": industry, "source": shared.OrDefault(e.Source, "openapi"), "version": e.Version,
 	}, nil
 }
 
@@ -160,7 +162,7 @@ func (p *plugin) catalogListSkills(ctx context.Context, cred *credential) ([]map
 			continue
 		}
 		out = append(out, map[string]interface{}{
-			"id": fmt.Sprint(s.SkillID), "name": orDefault(s.DisplayName, s.Name), "version": s.Version,
+			"id": fmt.Sprint(s.SkillID), "name": shared.OrDefault(s.DisplayName, s.Name), "version": s.Version,
 		})
 	}
 	return out, nil
@@ -199,7 +201,7 @@ func (p *plugin) catalogFindTheme(ctx context.Context, cred *credential, keyword
 		if r.ID != nil && containsStr(r.Name, keyword) {
 			return map[string]interface{}{
 				"resourceKey": fmt.Sprint(r.ID), "name": r.Name,
-				"vipLevel": orDefault(r.VipLevel, "free"), "series": orDefault(r.Series, "craft"),
+				"vipLevel": shared.OrDefault(r.VipLevel, "free"), "series": shared.OrDefault(r.Series, "craft"),
 			}, nil
 		}
 	}

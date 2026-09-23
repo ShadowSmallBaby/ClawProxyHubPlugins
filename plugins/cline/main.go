@@ -6,12 +6,9 @@ package main
 import (
 	"bytes"
 	"context"
-	crand "crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -22,6 +19,7 @@ import (
 	"github.com/ShadowSmallBaby/ClawProxyHub/sdk"
 	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/openaiup"
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
 const (
@@ -99,20 +97,8 @@ func credFrom(blob *pb.CredentialBlob) (*credential, error) {
 	if c.RefreshToken == "" && c.AccessToken == "" {
 		return nil, fmt.Errorf("credential missing refreshToken")
 	}
-	c.proxyURL = proxyURL(blob.GetProxy())
+	c.proxyURL = shared.ProxyURL(blob.GetProxy())
 	return c, nil
-}
-
-// proxyURL 代理配置 → URL 字符串。
-func proxyURL(p *pb.ProxyConfig) string {
-	if p == nil || p.GetHost() == "" {
-		return ""
-	}
-	u := &url.URL{Scheme: orDefault(p.GetScheme(), "http"), Host: fmt.Sprintf("%s:%d", p.GetHost(), p.GetPort())}
-	if p.GetUsername() != "" {
-		u.User = url.UserPassword(p.GetUsername(), p.GetPassword())
-	}
-	return u.String()
 }
 
 var proxyClients sync.Map // proxyURL → *http.Client
@@ -126,25 +112,9 @@ func (p *plugin) hc(cred *credential) *http.Client {
 	if c, ok := proxyClients.Load(key); ok {
 		return c.(*http.Client)
 	}
-	c := upstreamClient(key)
+	c := shared.UpstreamClient(key)
 	proxyClients.Store(key, c)
 	return c
-}
-
-// upstreamClient 连接 15s / TLS 15s / 首字节 60s，流式对话整体不设超时（长回复合法）。
-func upstreamClient(proxyURL string) *http.Client {
-	transport := &http.Transport{
-		DialContext:           (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 60 * time.Second,
-		IdleConnTimeout:       90 * time.Second,
-	}
-	if proxyURL != "" {
-		if u, err := url.Parse(proxyURL); err == nil {
-			transport.Proxy = http.ProxyURL(u)
-		}
-	}
-	return &http.Client{Transport: transport}
 }
 
 // headers /chat/completions 请求头（照官方客户端 resolveProviderRequestHeaders 的头集）。
@@ -258,7 +228,7 @@ func (p *plugin) loginDevice(ctx context.Context, req *pb.LoginRequest) (*pb.Log
 		defer httpResp.Body.Close()
 		if httpResp.StatusCode != 200 {
 			body, _ := io.ReadAll(io.LimitReader(httpResp.Body, 2048))
-			return &pb.LoginResult{Error: &pb.Error{Code: 502, Message: fmt.Sprintf("device auth failed: HTTP %d %s", httpResp.StatusCode, truncate(string(body), 200))}}, nil
+			return &pb.LoginResult{Error: &pb.Error{Code: 502, Message: fmt.Sprintf("device auth failed: HTTP %d %s", httpResp.StatusCode, shared.Truncate(string(body), 200))}}, nil
 		}
 		var d struct {
 			DeviceCode              string `json:"device_code"`
@@ -273,7 +243,7 @@ func (p *plugin) loginDevice(ctx context.Context, req *pb.LoginRequest) (*pb.Log
 		}
 		// device_code 与 cline register 一起走第二步
 		state, _ := json.Marshal(map[string]string{"device_code": d.DeviceCode})
-		authURL := orDefault(d.VerificationURIComplete, d.VerificationURI)
+		authURL := shared.OrDefault(d.VerificationURIComplete, d.VerificationURI)
 		return &pb.LoginResult{Next: &pb.LoginNextStep{
 			Action: "open_url", Url: authURL,
 			Prompt: map[string]string{
@@ -314,7 +284,7 @@ func (p *plugin) loginDevice(ctx context.Context, req *pb.LoginRequest) (*pb.Log
 	}
 	_ = json.NewDecoder(httpResp.Body).Decode(&a)
 	if a.AccessToken == "" {
-		msg := orDefault(a.ErrorDesc, orDefault(a.Error, "尚未完成授权，请先在浏览器完成登录"))
+		msg := shared.OrDefault(a.ErrorDesc, shared.OrDefault(a.Error, "尚未完成授权，请先在浏览器完成登录"))
 		if a.Error == "authorization_pending" || a.Error == "slow_down" {
 			msg = "尚未完成授权，请先在浏览器完成登录"
 		}
@@ -339,7 +309,7 @@ func (p *plugin) registerCline(ctx context.Context, workosAccess, workosRefresh 
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("cline register failed: HTTP %d %s", resp.StatusCode, truncate(string(raw), 200))
+		return nil, fmt.Errorf("cline register failed: HTTP %d %s", resp.StatusCode, shared.Truncate(string(raw), 200))
 	}
 	var e struct {
 		Data struct {
@@ -373,7 +343,7 @@ func (p *plugin) refreshCred(ctx context.Context, c *credential) error {
 		return fmt.Errorf("refreshToken 已失效，请重新登录")
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("refresh failed: HTTP %d %s", resp.StatusCode, truncate(string(raw), 200))
+		return fmt.Errorf("refresh failed: HTTP %d %s", resp.StatusCode, shared.Truncate(string(raw), 200))
 	}
 	var e struct {
 		Data struct {
@@ -521,7 +491,7 @@ func (p *plugin) accountJSON(ctx context.Context, c *credential, method, path st
 		return nil, fmt.Errorf("account auth failed: HTTP 401")
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, truncate(string(raw), 200))
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 200))
 	}
 	var env struct {
 		Success bool                   `json:"success"`
@@ -532,7 +502,7 @@ func (p *plugin) accountJSON(ctx context.Context, c *credential, method, path st
 		return nil, fmt.Errorf("non-json response")
 	}
 	if !env.Success {
-		return nil, fmt.Errorf("%s", orDefault(env.Error, "account request failed"))
+		return nil, fmt.Errorf("%s", shared.OrDefault(env.Error, "account request failed"))
 	}
 	return env.Data, nil
 }
@@ -597,7 +567,7 @@ func (p *plugin) ListModels(ctx context.Context, credBlob *pb.CredentialBlob) (*
 			continue
 		}
 		models = append(models, &pb.ModelInfo{
-			Id: m.ID, Label: map[string]string{"en": orDefault(m.Name, m.ID)},
+			Id: m.ID, Label: map[string]string{"en": shared.OrDefault(m.Name, m.ID)},
 			SupportsTools: true, SupportsStream: true,
 		})
 	}
@@ -613,19 +583,19 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	ctx := stream.Context()
 	c, err := credFrom(req.GetCredential())
 	if err != nil {
-		return stream.Send(failed(401, err.Error()))
+		return stream.Send(shared.Failed(401, err.Error()))
 	}
 	if err := p.ensureToken(ctx, c); err != nil {
-		return stream.Send(failed(401, err.Error()))
+		return stream.Send(shared.Failed(401, err.Error()))
 	}
 
 	body := openaiup.ChatBody(req)
-	body["model"] = orDefault(req.Model, "deepseek/deepseek-v4-flash")
+	body["model"] = shared.OrDefault(req.Model, "deepseek/deepseek-v4-flash")
 	raw, _ := json.Marshal(body)
 
-	resp, err := postJSON(ctx, p.hc(c), apiBase+"/chat/completions", p.headers(c, randHex(16)), raw)
+	resp, err := postJSON(ctx, p.hc(c), apiBase+"/chat/completions", p.headers(c, shared.RandHex(16)), raw)
 	if err != nil {
-		return stream.Send(failed(502, err.Error()))
+		return stream.Send(shared.Failed(502, err.Error()))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
@@ -637,7 +607,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		case resp.StatusCode == 429:
 			code = 429
 		}
-		return stream.Send(failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncate(string(errBody), 300))))
+		return stream.Send(shared.Failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(errBody), 300))))
 	}
 
 	if err := stream.Send(&pb.StreamEvent{Event: &pb.StreamEvent_MessageStart{
@@ -646,53 +616,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		return err
 	}
 	parser := openaiup.NewParser(func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
-	return scanSSE(resp.Body, parser)
-}
-
-func scanSSE(body io.Reader, parser interface {
-	Feed(string)
-	Finish()
-	FinishWithError(int32, string)
-}) error {
-	tmp := make([]byte, 64*1024)
-	var pending string
-	sawEvent := false
-	for {
-		n, err := body.Read(tmp)
-		if n > 0 {
-			scanned := string(pending) + string(tmp[:n])
-			pending = ""
-			for {
-				i := strings.IndexByte(scanned, '\n')
-				if i < 0 {
-					break
-				}
-				line := strings.TrimSuffix(scanned[:i], "\r")
-				scanned = scanned[i+1:]
-				if strings.HasPrefix(line, "data:") && !strings.Contains(line, "[DONE]") {
-					sawEvent = true
-				}
-				parser.Feed(line)
-			}
-			pending = scanned
-		}
-		if err != nil {
-			if len(pending) > 0 {
-				parser.Feed(pending)
-			}
-			if err != io.EOF {
-				parser.FinishWithError(502, "upstream stream broken: "+err.Error())
-				return nil
-			}
-			break
-		}
-	}
-	if !sawEvent {
-		parser.FinishWithError(502, "upstream returned an empty stream")
-		return nil
-	}
-	parser.Finish()
-	return nil
+	return shared.ScanSSE(resp.Body, parser)
 }
 
 // ---------- 工具 ----------
@@ -706,7 +630,7 @@ func postJSON(ctx context.Context, client *http.Client, rawURL string, headers m
 		req.Header.Set(k, v)
 	}
 	if client == nil {
-		client = upstreamClient("")
+		client = shared.UpstreamClient("")
 	}
 	return client.Do(req)
 }
@@ -717,7 +641,7 @@ func postForm(ctx context.Context, rawURL string, form url.Values) (*http.Respon
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	return upstreamClient("").Do(req)
+	return shared.UpstreamClient("").Do(req)
 }
 
 // parseExpiry 上游 expiresAt 多形状（毫秒数 / RFC3339 字符串）→ unix 毫秒。
@@ -733,31 +657,4 @@ func parseExpiry(exp any) int64 {
 		}
 	}
 	return 0
-}
-
-func failed(code int32, msg string) *pb.StreamEvent {
-	return &pb.StreamEvent{Event: &pb.StreamEvent_TaskFailed{
-		TaskFailed: &pb.TaskFailed{Error: &pb.Error{Code: code, Message: msg}},
-	}}
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
-}
-
-func orDefault(s, def string) string {
-	if s == "" {
-		return def
-	}
-	return s
-}
-
-// randHex 随机 hex（X-Task-ID 会话 id 等用途）。
-func randHex(n int) string {
-	b := make([]byte, n)
-	crand.Read(b)
-	return hex.EncodeToString(b)
 }

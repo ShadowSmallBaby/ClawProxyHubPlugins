@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
 const (
@@ -346,7 +347,7 @@ func (p *plugin) runGrowthTasks(ctx context.Context, cred *credential) (*pb.RunT
 		}
 		n, err := p.advanceTask(ctx, cred, t)
 		if err != nil {
-			advanceFailed = append(advanceFailed, orDefault(t.Title, t.Code))
+			advanceFailed = append(advanceFailed, shared.OrDefault(t.Title, t.Code))
 			continue
 		}
 		advanced += n

@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
 // postRaw POST 原始 JSON body。
@@ -26,7 +28,7 @@ func postRaw(ctx context.Context, client *http.Client, url string, headers map[s
 		req.Header.Set(k, v)
 	}
 	if client == nil {
-		client = upstreamClient("")
+		client = shared.UpstreamClient("")
 	}
 	return client.Do(req)
 }
@@ -79,7 +81,7 @@ var (
 // fingerprint 进程内生成一次，模拟同一台桌面端。
 func fingerprint() (string, string, string) {
 	fpOnce.Do(func() {
-		fp.machineID, fp.qimei36, fp.sessionID = uuidV4(), randHex(16), uuidV4()
+		fp.machineID, fp.qimei36, fp.sessionID = uuidV4(), shared.RandHex(16), uuidV4()
 	})
 	return fp.machineID, fp.qimei36, fp.sessionID
 }
@@ -100,7 +102,7 @@ func uuidV4() string {
 type conversationIDs struct{ conversation, request, message string }
 
 func newConversation() conversationIDs {
-	return conversationIDs{uuidV4(), randHex(16), randHex(16)}
+	return conversationIDs{uuidV4(), shared.RandHex(16), shared.RandHex(16)}
 }
 
 // commonFields 每条事件都带的客户端公共字段。
@@ -160,8 +162,8 @@ type chatEventOpts struct {
 
 func chatRequestSendEvent(cred *credential, ids conversationIDs, o chatEventOpts) map[string]interface{} {
 	f := map[string]interface{}{
-		"mode": orDefault(o.mode, "craft"), "conversationId": ids.conversation, "requestId": ids.request,
-		"inputLength": 32, "requestModelId": o.model, "requestModelName": orDefault(o.modelName, o.model),
+		"mode": shared.OrDefault(o.mode, "craft"), "conversationId": ids.conversation, "requestId": ids.request,
+		"inputLength": 32, "requestModelId": o.model, "requestModelName": shared.OrDefault(o.modelName, o.model),
 		"isPlan": false, "isAutoExecuteTerminal": false, "isAutoModify": false, "codebaseEnable": false,
 		"maxToken": 0, "maxSteps": 500, "temperature": 0, "maxRetries": 0, "mentionContexts": []string{},
 		"knowledgeId": []string{}, "knowledgeName": []string{}, "codebaseId": "", "mentionContextCount": 0,
@@ -170,7 +172,7 @@ func chatRequestSendEvent(cred *credential, ids conversationIDs, o chatEventOpts
 		"codebuddy.session_id":              ids.conversation,
 		"codebuddy.conversation_request_id": ids.request,
 	}
-	for k, v := range traceFields(ids, orDefault(o.agentType, "main")) {
+	for k, v := range traceFields(ids, shared.OrDefault(o.agentType, "main")) {
 		f[k] = v
 	}
 	return ev(evChatRequestSend, cred, f)
@@ -179,11 +181,11 @@ func chatRequestSendEvent(cred *credential, ids conversationIDs, o chatEventOpts
 func chatMessageSendEvent(cred *credential, ids conversationIDs, o chatEventOpts) map[string]interface{} {
 	f := map[string]interface{}{
 		"conversationId": ids.conversation, "requestId": ids.request, "messageId": ids.message,
-		"requestModelId": o.model, "requestModelName": orDefault(o.modelName, o.model),
+		"requestModelId": o.model, "requestModelName": shared.OrDefault(o.modelName, o.model),
 		"historyCount": 0, "isContextTruncated": false, "currentStepCount": 1,
 		"presentAt": nowMS(), "expertId": o.expertID,
 	}
-	for k, v := range traceFields(ids, orDefault(o.agentType, "main")) {
+	for k, v := range traceFields(ids, shared.OrDefault(o.agentType, "main")) {
 		f[k] = v
 	}
 	return ev(evChatMessageSend, cred, f)
@@ -193,14 +195,14 @@ func chatMessageResponseEvent(cred *credential, ids conversationIDs, o chatEvent
 	now := nowMS()
 	f := map[string]interface{}{
 		"conversationId": ids.conversation, "requestId": ids.request, "messageId": ids.message,
-		"requestModelId": o.model, "requestModelName": orDefault(o.modelName, o.model), "responseModelId": o.model,
+		"requestModelId": o.model, "requestModelName": shared.OrDefault(o.modelName, o.model), "responseModelId": o.model,
 		"isSuccessful": true, "messageErrorCode": "0", "finishReason": "stop",
 		"firstTokenAt": now, "presentAt": now, "expertId": o.expertID,
 	}
 	for k, v := range usageFields(16, 32) {
 		f[k] = v
 	}
-	for k, v := range traceFields(ids, orDefault(o.agentType, "main")) {
+	for k, v := range traceFields(ids, shared.OrDefault(o.agentType, "main")) {
 		f[k] = v
 	}
 	return ev(evChatMessageResponse, cred, f)
@@ -208,15 +210,15 @@ func chatMessageResponseEvent(cred *credential, ids conversationIDs, o chatEvent
 
 func chatRequestResponseEvent(cred *credential, ids conversationIDs, o chatEventOpts) map[string]interface{} {
 	f := map[string]interface{}{
-		"mode": orDefault(o.mode, "craft"), "conversationId": ids.conversation, "requestId": ids.request,
-		"requestModelId": o.model, "requestModelName": orDefault(o.modelName, o.model), "toolCallCount": 0,
+		"mode": shared.OrDefault(o.mode, "craft"), "conversationId": ids.conversation, "requestId": ids.request,
+		"requestModelId": o.model, "requestModelName": shared.OrDefault(o.modelName, o.model), "toolCallCount": 0,
 		"isSuccessful": true, "messageErrorCode": "0", "finishReason": "stop",
 		"presentAt": nowMS(), "expertId": o.expertID,
 	}
 	for k, v := range usageFields(16, 32) {
 		f[k] = v
 	}
-	for k, v := range traceFields(ids, orDefault(o.agentType, "main")) {
+	for k, v := range traceFields(ids, shared.OrDefault(o.agentType, "main")) {
 		f[k] = v
 	}
 	return ev(evChatRequestResponse, cred, f)
@@ -252,13 +254,13 @@ func taskCreatedEvent(cred *credential, ids conversationIDs, o chatEventOpts, ta
 	hasTpl, hasExpert := tpl != nil, expert != nil
 	skills := nonEmpty(skillNames)
 	return ev(evTaskCreated, cred, map[string]interface{}{
-		"source": "desktop", "name": taskMode, "task_target": "local", "mode": orDefault(o.mode, "craft"),
+		"source": "desktop", "name": taskMode, "task_target": "local", "mode": shared.OrDefault(o.mode, "craft"),
 		"requestModelId": o.model, "has_repo": false, "repo_type": "", "workspace_type": "empty",
 		"has_connector": false, "connector_types": []string{}, "has_mention": false, "mention_types": []string{},
 		"has_template": hasTpl, "action": ternaryStr(hasTpl, templateAction(tpl), ""),
 		"template_name":  mapStr(tpl, "name"),
 		"conversationId": ids.conversation, "requestId": ids.request, "messageId": "",
-		"requestModelName": orDefault(o.modelName, o.model),
+		"requestModelName": shared.OrDefault(o.modelName, o.model),
 		"has_expert":       hasExpert, "expert_id": mapStr(expert, "id"), "expert_name": mapStr(expert, "name"),
 		"expert_industry_id": mapStr(expert, "industryId"),
 		"has_skill":          len(skills) > 0, "skill_names": skills,
@@ -282,7 +284,7 @@ func expertSummonedEvent(cred *credential, expert map[string]interface{}) map[st
 	return ev(evExpertSummoned, cred, map[string]interface{}{
 		"id": mapStr(expert, "id"), "name": mapStr(expert, "name"),
 		"expertTitle": mapStr(expert, "title"), "type": mapStr(expert, "industryId"),
-		"expertType": orDefault(mapStr(expert, "expertType"), "agent"),
+		"expertType": shared.OrDefault(mapStr(expert, "expertType"), "agent"),
 	})
 }
 
@@ -290,8 +292,8 @@ func expertActualUseEvent(cred *credential, ids conversationIDs, expert map[stri
 	return ev(evExpertActualUse, cred, map[string]interface{}{
 		"mode": "desktop", "id": mapStr(expert, "id"), "name": mapStr(expert, "name"),
 		"expertTitle": mapStr(expert, "title"), "type": mapStr(expert, "industryId"),
-		"expertType": orDefault(mapStr(expert, "expertType"), "agent"),
-		"source":     orDefault(mapStr(expert, "source"), "openapi"), "version": mapStr(expert, "version"), "cost": 0,
+		"expertType": shared.OrDefault(mapStr(expert, "expertType"), "agent"),
+		"source":     shared.OrDefault(mapStr(expert, "source"), "openapi"), "version": mapStr(expert, "version"), "cost": 0,
 		"conversationId": ids.conversation, "requestId": ids.request,
 	})
 }
@@ -328,7 +330,7 @@ func chatToolActionEvent(cred *credential, ids conversationIDs, toolName string,
 	f := map[string]interface{}{
 		"conversationId": ids.conversation, "requestId": ids.request, "messageId": ids.message,
 		"toolName": toolName, "toolCallSuccessful": true, "toolStatus": "success",
-		"requestModelId": o.model, "requestModelName": orDefault(o.modelName, o.model),
+		"requestModelId": o.model, "requestModelName": shared.OrDefault(o.modelName, o.model),
 		"toolErrorCode": "0", "toolErrorCodeKey": "Success", "toolErrorMessage": "", "type": "main",
 		"presentAt": nowMS(),
 	}
@@ -343,7 +345,7 @@ func skillInfoEvent(cred *credential, ids conversationIDs, skill map[string]inte
 		"id": mapStr(skill, "name"), "skillId": mapStr(skill, "id"), "skillVersion": mapStr(skill, "version"),
 		"toolStatus": "success", "fileCount": 1, "source": extName,
 		"conversationId": ids.conversation, "requestId": ids.request, "messageId": ids.message,
-		"requestModelId": o.model, "requestModelName": orDefault(o.modelName, o.model), "traceId": ids.request,
+		"requestModelId": o.model, "requestModelName": shared.OrDefault(o.modelName, o.model), "traceId": ids.request,
 	})
 }
 
@@ -357,7 +359,7 @@ func designConversationCreateEvent(cred *credential, ids conversationIDs) map[st
 func designCanvasTaskCreateEvent(cred *credential, ids conversationIDs, name string) map[string]interface{} {
 	return ev(evDesignCanvasTaskCreate, cred, map[string]interface{}{
 		"conversationId": ids.conversation, "requestId": ids.request, "source": "design_tab",
-		"isCustomModel": false, "name": name, "inputLength": 32, "id": randHex(16),
+		"isCustomModel": false, "name": name, "inputLength": 32, "id": shared.RandHex(16),
 		"cost": 1500, "isSuccessful": true,
 	})
 }
@@ -372,8 +374,8 @@ func automationCreatedEvent(cred *credential, name string) map[string]interface{
 func appearanceSkinApplyEvent(cred *credential, theme map[string]interface{}) map[string]interface{} {
 	return ev(evAppearanceSkinApply, cred, map[string]interface{}{
 		"action": "apply", "source": "settings_close", "id": mapStr(theme, "resourceKey"),
-		"vipLevel": orDefault(mapStr(theme, "vipLevel"), "free"), "series": orDefault(mapStr(theme, "series"), "craft"),
-		"type": orDefault(mapStr(theme, "editionType"), "free"),
+		"vipLevel": shared.OrDefault(mapStr(theme, "vipLevel"), "free"), "series": shared.OrDefault(mapStr(theme, "series"), "craft"),
+		"type": shared.OrDefault(mapStr(theme, "editionType"), "free"),
 	})
 }
 

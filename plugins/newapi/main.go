@@ -8,9 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +16,7 @@ import (
 
 	"github.com/ShadowSmallBaby/ClawProxyHub/sdk"
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
+	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
 const (
@@ -117,7 +116,7 @@ func (p *plugin) site(instanceID int64) (*siteConfig, error) {
 	if cfg.CheckinMode == "" {
 		cfg.CheckinMode = checkinAPI
 	}
-	cfg.BrowserUA = orDefault(cfg.BrowserUA, defaultBrowserUA)
+	cfg.BrowserUA = shared.OrDefault(cfg.BrowserUA, defaultBrowserUA)
 	if cfg.BaseURL == "" {
 		if !fetched {
 			return nil, fmt.Errorf("无法读取实例 #%d 设置（宿主连接失败），请重启插件后重试", instanceID)
@@ -184,7 +183,7 @@ func credFrom(blob *pb.CredentialBlob) (*credential, error) {
 	}
 	c.instanceID = blob.GetInstanceId()
 	c.accountID = blob.GetAccountId()
-	c.proxyURL = proxyURL(blob.GetProxy())
+	c.proxyURL = shared.ProxyURL(blob.GetProxy())
 	return &c, nil
 }
 
@@ -214,17 +213,6 @@ func (c *credential) sessionStale() bool {
 	return c.SessionExp > 0 && time.Now().Unix() > c.SessionExp-60
 }
 
-func proxyURL(p *pb.ProxyConfig) string {
-	if p == nil || p.GetHost() == "" {
-		return ""
-	}
-	u := &url.URL{Scheme: orDefault(p.GetScheme(), "http"), Host: fmt.Sprintf("%s:%d", p.GetHost(), p.GetPort())}
-	if p.GetUsername() != "" {
-		u.User = url.UserPassword(p.GetUsername(), p.GetPassword())
-	}
-	return u.String()
-}
-
 // ---------- HTTP ----------
 
 var proxyClients sync.Map // proxyURL → *http.Client
@@ -237,25 +225,9 @@ func (p *plugin) hc(cred *credential) *http.Client {
 	if c, ok := proxyClients.Load(key); ok {
 		return c.(*http.Client)
 	}
-	c := upstreamClient(key)
+	c := shared.UpstreamClient(key)
 	proxyClients.Store(key, c)
 	return c
-}
-
-// upstreamClient 连接 15s / TLS 15s / 首字节 60s，流式对话整体不设超时。
-func upstreamClient(proxyURL string) *http.Client {
-	transport := &http.Transport{
-		DialContext:           (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 60 * time.Second,
-		IdleConnTimeout:       90 * time.Second,
-	}
-	if proxyURL != "" {
-		if u, err := url.Parse(proxyURL); err == nil {
-			transport.Proxy = http.ProxyURL(u)
-		}
-	}
-	return &http.Client{Transport: transport}
 }
 
 // gatewayHeaders /v1 网关请求头（api_key）。ua：对话用核心下发（路由 > 全局 > 客户端），目录用 modelsUA；空则不设置。
@@ -342,14 +314,14 @@ func (p *plugin) managementOnce(ctx context.Context, cred *credential, site *sit
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	var env apiEnvelope
 	if resp.StatusCode == 401 || resp.StatusCode == 403 {
-		msg := truncate(string(raw), 200)
+		msg := shared.Truncate(string(raw), 200)
 		if json.Unmarshal(raw, &env) == nil && env.Message != "" {
 			msg = env.Message
 		}
 		return nil, &authError{msg: fmt.Sprintf("management auth failed: HTTP %d %s", resp.StatusCode, msg)}
 	}
 	if err := json.Unmarshal(raw, &env); err != nil {
-		return nil, fmt.Errorf("upstream non-json (HTTP %d): %s", resp.StatusCode, truncate(string(raw), 200))
+		return nil, fmt.Errorf("upstream non-json (HTTP %d): %s", resp.StatusCode, shared.Truncate(string(raw), 200))
 	}
 	if !env.Success {
 		return nil, &apiError{message: env.Message}
@@ -455,24 +427,4 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 			},
 		},
 	}}, nil
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
-}
-
-func orDefault(s, def string) string {
-	if s == "" {
-		return def
-	}
-	return s
-}
-
-func failed(code int32, msg string) *pb.StreamEvent {
-	return &pb.StreamEvent{Event: &pb.StreamEvent_TaskFailed{
-		TaskFailed: &pb.TaskFailed{Error: &pb.Error{Code: code, Message: msg}},
-	}}
 }
