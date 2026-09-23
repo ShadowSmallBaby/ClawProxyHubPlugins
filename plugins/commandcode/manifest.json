@@ -1,0 +1,11 @@
+{
+  "name": "commandcode",
+  "version": "0.1.0",
+  "author": "cph",
+  "label": {
+    "zh": "Command Code",
+    "en": "Command Code"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
