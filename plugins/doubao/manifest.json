@@ -1,0 +1,11 @@
+{
+  "name": "doubao",
+  "version": "0.1.0",
+  "author": "cph",
+  "label": {
+    "zh": "豆包",
+    "en": "Doubao"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
