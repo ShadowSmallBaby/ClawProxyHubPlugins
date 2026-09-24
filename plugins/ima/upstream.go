@@ -44,7 +44,7 @@ func (p *plugin) hc(cred *credential) *http.Client {
 	if c, ok := proxyClients.Load(key); ok {
 		return c.(*http.Client)
 	}
-	c := shared.UpstreamClient(key)
+	c := sdk.UpstreamClient(key)
 	proxyClients.Store(key, c)
 	return c
 }
@@ -99,7 +99,7 @@ func (p *plugin) imaPost(ctx context.Context, cred *credential, client *http.Cli
 		if cred != nil {
 			client = p.hc(cred)
 		} else {
-			client = shared.UpstreamClient("")
+			client = sdk.UpstreamClient("")
 		}
 	}
 	hr, err := p.host.HTTPPost(ctx, sdk.HTTPRequest{
@@ -156,7 +156,56 @@ func (p *plugin) probeSession(ctx context.Context, c *credential) error {
 	return err
 }
 
+// blockParser 行级 SSE → 块级回调适配器（空行分块，event/data 行合并）。
+// 回调 error 记入 err 字段并终止后续回调（对齐旧 HTTPStream 透传语义）。
+type blockParser struct {
+	h      *sdk.Host
+	method string
+	url    string
+	on     func(event, data string) error
+
+	event string
+	datas []string
+	err   error
+}
+
+func (b *blockParser) feed(line string) {
+	if b.err != nil {
+		return
+	}
+	switch {
+	case strings.HasPrefix(line, "event:"):
+		b.event = strings.TrimSpace(line[6:])
+	case strings.HasPrefix(line, "data:"):
+		b.datas = append(b.datas, strings.TrimSpace(line[5:]))
+	case line == "":
+		b.flush()
+	}
+}
+
+func (b *blockParser) flush() {
+	if b.err != nil || (b.event == "" && len(b.datas) == 0) {
+		return
+	}
+	e := b.on(b.event, strings.Join(b.datas, "\n"))
+	b.event = ""
+	b.datas = nil
+	if e != nil {
+		b.err = e
+		b.h.LogFields("debug", "cph-http 流结束(回调中断): "+b.method+" "+b.url, map[string]string{"action": "http", "detail": e.Error()})
+	}
+}
+
+func (b *blockParser) Feed(line string) { b.feed(line) }
+func (b *blockParser) Finish()          { b.flush() }
+func (b *blockParser) FinishWithError(code int32, msg string) {
+	if b.err == nil {
+		b.err = fmt.Errorf("upstream %d: %s", code, msg)
+	}
+}
+
 // qaStream POST /cgi-bin/assistant/qa SSE 流逐事件回调（event, data）。
+// 走 host.StreamSSE（统一日志）；行级流经 blockParser 转回块级回调。
 // 返回 HTTP 层错误；业务事件经 onEvent 处理，返回 error 表示终止流。
 func (p *plugin) qaStream(ctx context.Context, c *credential, sessionID, question string, modelType int64, modelUpID string,
 	onEvent func(event, data string) error) error {
@@ -177,14 +226,18 @@ func (p *plugin) qaStream(ctx context.Context, c *credential, sessionID, questio
 	})
 	headers := p.authHeaders(c)
 	headers["Accept"] = "text/event-stream"
-	hr, err := p.host.HTTPStream(ctx, sdk.HTTPRequest{
+	bp := &blockParser{h: p.host, method: "POST", url: upstreamBase + pathQA, on: onEvent}
+	hr, err := p.host.StreamSSE(ctx, sdk.HTTPRequest{
 		Method: "POST", URL: upstreamBase + pathQA, Headers: headers, Body: payload,
-	}, p.hc(c), onEvent)
+	}, p.hc(c), bp)
 	if err != nil {
 		return err
 	}
 	if hr.Status != 200 {
 		return fmt.Errorf("HTTP %d: %s", hr.Status, truncateString(string(hr.Body), 300))
+	}
+	if bp.err != nil {
+		return bp.err
 	}
 	return nil
 }

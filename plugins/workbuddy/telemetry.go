@@ -16,6 +16,8 @@ import (
 	"time"
 
 	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
+
+	sdk "github.com/ShadowSmallBaby/ClawProxyHub/sdk"
 )
 
 // postRaw POST 原始 JSON body。
@@ -28,7 +30,7 @@ func postRaw(ctx context.Context, client *http.Client, url string, headers map[s
 		req.Header.Set(k, v)
 	}
 	if client == nil {
-		client = shared.UpstreamClient("")
+		client = sdk.UpstreamClient("")
 	}
 	return client.Do(req)
 }

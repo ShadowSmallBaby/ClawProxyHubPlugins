@@ -12,6 +12,8 @@ import (
 	"time"
 
 	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
+
+	sdk "github.com/ShadowSmallBaby/ClawProxyHub/sdk"
 )
 
 var proxyClients sync.Map // proxyURL → *http.Client
@@ -35,7 +37,7 @@ func (p *plugin) hc(cred *credential) *http.Client {
 	if c, ok := proxyClients.Load(key); ok {
 		return c.(*http.Client)
 	}
-	c := shared.UpstreamClient(key)
+	c := sdk.UpstreamClient(key)
 	proxyClients.Store(key, c)
 	return c
 }

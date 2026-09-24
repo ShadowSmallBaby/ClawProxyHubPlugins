@@ -9,7 +9,8 @@ import (
 	"strings"
 
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
-	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
+
+	sdk "github.com/ShadowSmallBaby/ClawProxyHub/sdk"
 )
 
 // credential CC 就是一个 user_ 前缀的 API Key；设备指纹随凭据持久化
@@ -36,7 +37,7 @@ func credFrom(blob *pb.CredentialBlob) (*credential, error) {
 	if c.Key == "" {
 		return nil, fmt.Errorf("credential missing key")
 	}
-	c.proxyURL = shared.ProxyURL(blob.GetProxy())
+	c.proxyURL = sdk.ProxyURL(blob.GetProxy())
 	return c, nil
 }
 

@@ -69,5 +69,5 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	}}); err != nil {
 		return err
 	}
-	return shared.ScanSSE(resp.Body, parser)
+	return sdk.ScanSSE(resp.Body, parser)
 }

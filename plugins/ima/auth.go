@@ -17,6 +17,8 @@ import (
 
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
 	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
+
+	sdk "github.com/ShadowSmallBaby/ClawProxyHub/sdk"
 )
 
 const (
@@ -53,7 +55,7 @@ func credFrom(blob *pb.CredentialBlob) (*credential, error) {
 	if c.Cookie == "" {
 		return nil, fmt.Errorf("凭据缺少 cookie")
 	}
-	c.proxyURL = shared.ProxyURL(blob.GetProxy())
+	c.proxyURL = sdk.ProxyURL(blob.GetProxy())
 	return c, nil
 }
 
