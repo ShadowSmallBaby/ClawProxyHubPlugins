@@ -38,8 +38,9 @@ jobs:
         id: released
         if: github.event_name != 'pull_request'
         run: |
+          shopt -s nullglob
           skip=""
-          for mf in plugins/*/manifest.json; do
+          for mf in plugins/*/manifest.json plugins-lua/*/manifest.json; do
             name=$(jq -r .name "$mf"); version=$(jq -r .version "$mf")
             if gh release view "${name}-v${version}" >/dev/null 2>&1; then
               skip="${skip:+$skip,}$name"

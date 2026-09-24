@@ -1,6 +1,6 @@
 # AGENTS.md — ClawProxyHub 插件开发指南
 
-面向人与 AI 编程助手的插件编写规范。本仓库是 [ClawProxyHub](https://github.com/ShadowSmallBaby/ClawProxyHub) 的官方插件库，一个子目录一个插件。读完本文即可从零写出一个可被核心加载、可上架市场的插件。
+面向人与 AI 编程助手的插件编写规范。本仓库是 [ClawProxyHub](https://github.com/ShadowSmallBaby/ClawProxyHub) 的官方插件库。读完本文即可从零写出一个可被核心加载、可上架市场的插件：**Go 插件**（`plugins/plugins/`，编译二进制，§1–10）或 **Lua 插件**（`plugins/plugins-lua/`，零编译脚本，§11）。
 
 > 契约真身是核心仓库的 `sdk/proto/cph.proto`（protocol v2）。本文是它的读法与落地范式，两者冲突时以 proto 为准。
 
@@ -8,7 +8,7 @@
 
 ## 1. 心智模型
 
-- **进程模型**：每个插件是一个独立可执行文件，核心用 [hashicorp/go-plugin](https://github.com/hashicorp/go-plugin) 以 gRPC 子进程方式拉起。核心是 gRPC 客户端调用插件（`ClawPlugin` 服务），插件反向调用核心（`ClawHost` 服务）。
+- **进程模型**：每个插件是一个独立可执行文件，核心用 [hashicorp/go-plugin](https://github.com/hashicorp/go-plugin) 以 gRPC 子进程方式拉起。核心是 gRPC 客户端调用插件（`ClawPlugin` 服务），插件反向调用核心（`ClawHost` 服务）。**Lua 插件**（§11）例外：脚本身，由核心内置 LuaHost 子进程解释执行，对核心 manager 仍呈现同一 gRPC 契约。
 - **唯一耦合点**：`cph.proto`。核心不认识任何具体插件，插件只实现契约。握手时双方校验 `protocol_version`，不一致直接拒载。
 - **凭据代管**：账号凭据是插件自定义格式的 opaque `blob`，核心只存不解析。插件通过 RPC 返回值把变更后的 blob 交回核心持久化。
 - **实例维度（v2）**：一个插件可挂多个「实例」（= 一个站点 / 部署）。核心固定提供 `name + base_url`，插件用 `instance_schema` 声明站点特有字段。登录 / 刷新 / 设置 / 任务回调都按 `instance_id` 区分。未声明 `instances` 能力的插件只有一个默认实例。
@@ -46,7 +46,7 @@ plugins/<name>/
 | `account.go` | 登录校验、资料与余额、刷新 | `Refresh` / `Get Profile`（也可与 auth 合并） |
 | `chat.go` | 统一信封 → 上游请求体 → 事件流 | `Chat` |
 | `models.go` | 模型目录（静态表或动态发现） | `ListModels` |
-| `task.go` / `activities.go` … | 任务能力：声明 + 执行（签到 / 成长任务等），重逻辑再细拆 | `ListTaskCapabilities` / `RunTask` |
+| `task.go` / `task_*.go` … | 任务能力：声明 + 执行（签到 / 成长任务等），重逻辑按 task_* 细拆（见 `workbuddy`） | `ListTaskCapabilities` / `RunTask` |
 | `fingerprint.go` | 设备指纹 / 客户端伪装（形态对齐目标 CLI） | Chat 请求头 |
 | `upstream.go` | 上游 HTTP/WebSocket 客户端封装（REST 调用集中处） | 被 chat/account/task 复用 |
 | `parser.go` / `envelope.go` | 上游私有协议 ↔ 统一信封转换（上游非标准 SSE 时才需要） | Chat |
@@ -57,10 +57,11 @@ plugins/<name>/
 ### 2.3 仓库级布局
 
 ```
-plugins/<name>/     # 各插件
-tools/pack/         # 打包器：交叉编译 + .cphplugin + index.json
-index.json          # 市场索引（CI 生成回写，勿手改）
-go.mod / go.work    # go.work 已忽略，本地开发覆盖用
+plugins/plugins/<name>/     # Go 插件（编译二进制）
+plugins/plugins-lua/<name>/ # Lua 插件（脚本，零编译，见 §11）
+tools/pack/                 # 打包器：Go 交叉编译 / Lua 平台无关包，统一 .cphplugin + index.json
+index.json                  # 市场索引（CI 生成回写，勿手改；条目带 runtime）
+go.mod / go.work            # go.work 已忽略，本地开发覆盖用
 ```
 
 ---
@@ -113,9 +114,9 @@ go.mod / go.work    # go.work 已忽略，本地开发覆盖用
 
 | 方法 | 用途 |
 | --- | --- |
-| `host.Log(level, msg)` | 统一日志管道 |
-| `host.StoreGet/StorePut(key, val)` | 凭据之外的小状态读写 |
-| `host.InstanceSettings(plugin, instanceID)` | 读实例视图设置（插件设置 ← 实例设置 ← base_url） |
+| `host.Log(level, msg)` / `host.LogFields(level, msg, fields)` | 统一日志管道 |
+| `host.StoreGet(key)` / `host.StorePut(key, val)` | 凭据之外的小状态读写（核心持久化到 DB，按插件名隔离） |
+| `host.Settings(plugin)` / `host.InstanceSettings(plugin, instanceID)` | 读插件级 / 实例视图设置（插件设置 ← 实例设置 ← base_url） |
 | `GetProxy`（核心自动在 blob 里带 `proxy`） | 出站代理，账号级优先 |
 
 `SetHost` 里应立刻把 `host` 存住，并（若需要）预建连接——broker 连接信息只短暂有效。
@@ -239,7 +240,7 @@ func (p *plugin) Login(ctx context.Context, req *pb.LoginRequest) (*pb.LoginResu
 ### 5.4 Refresh / GetProfile
 
 - `Refresh(CredentialBlob) → RefreshResult`：刷新 token / 会话。`blob` 为空表示无需变更；变更则回传新 blob 由核心持久化。可带 `notification` 触发站内通知（如密钥更换提醒重同步模型）。
-- `GetProfile(CredentialBlob) → AccountProfile`：余额与资料。`quota` 标准键 `credits` / `total_credits` / `used_credits`；精细明细走 `credits_json`（十进制字符串防精度丢失）；签到状态 / 成长计划等动态块用 `sections`（核心通用渲染 entries→descriptions、items→表格）。
+- `GetProfile(CredentialBlob) → AccountProfile`：余额与资料。仪表盘三个标准键：`quota.credits`（剩余）/ `quota.used_credits`（已用）/ `quota.total_credits`（总额）——数字字符串（`fmtThousands` 渲染）；核心积分列另从 `credits_json` 快照解析 `remaining` / `total`，插件解析了就同步写两处；签到状态 / 成长计划等动态块用 `sections`（核心通用渲染 entries→descriptions、items→表格）。
 
 刷新健壮性：静态密钥类（无可刷新态）应原样返回不报错；改名 / 会话过期要能自动重登。
 
@@ -297,7 +298,7 @@ func failed(code int32, msg string) *pb.StreamEvent {
 
 **Usage 语义（重要，采用 Anthropic 语义）**：`input_tokens` 是**非缓存**输入，`cached_tokens`（缓存读）、`cache_creation_tokens`（缓存写）单列，三者之和才是总输入。OpenAI 系的 `prompt_tokens`（含缓存）由 SDK 解析器自动拆开、网关出口再合回——用 SDK Parser 就无需自己处理。
 
-**上游是非标准协议时**（NDJSON / WebSocket / 私有事件）：SDK Parser 用不上，自写 `parser.go` 把上游事件翻成 `StreamEvent`（参考 `commandcode/parser.go` 的 NDJSON、`todofor` 的 WebSocket）。请求体转换同理自写 `envelope.go`。
+**上游是非标准协议时**（NDJSON / WebSocket / 私有事件）：SDK Parser 用不上，自写 `parser.go` 把上游事件翻成 `StreamEvent`（参考 `puter` 的 NDJSON、`todofor` 的 WebSocket）。请求体转换同理自写 `envelope.go`（参考 `commandcode` / `devin`）。
 
 **上游不能执行客户端工具时**：用文本协议教上游"用严格文本块表达工具调用"，再在 Parser 里解析回 `ToolCallDelta`（参考 `todofor/toolproto.go`）。
 
@@ -411,7 +412,7 @@ go run ./tools/pack -only workbuddy # 只打某个
 go run ./tools/pack -skip lobsterai # 跳过已发布版本，索引沿用现有 index.json
 ```
 
-- 包格式：zip，含 `manifest.json` + 图标 + `plugin-<os>-<arch>[.exe]`（windows/amd64、linux/amd64、linux/arm64、darwin/amd64、darwin/arm64）。
+- 包格式：`.cphplugin`，含 `manifest.json` + 图标 + `plugin-<os>-<arch>[.exe]`（windows/amd64、linux/amd64、linux/arm64、darwin/amd64、darwin/arm64）。
 - 固定时间戳，同一输入产出同一 sha256（可复现）。
 - **`index.json` 陷阱**：`-skip` 沿用现有索引条目，别 reset 破坏基线，否则已发布插件条目会永久丢失、CI 补不回；sha 须匹配现存 release。
 
@@ -434,7 +435,9 @@ go vet ./... && go test ./... && go run ./tools/pack -only <你的插件>
 
 ## 9. 新插件检查清单
 
-- [ ] `plugins/<name>/`，`name` = 目录名 = `manifest.json` 的 `name`，全局唯一。
+**Go 插件：**
+
+- [ ] `plugins/plugins/<name>/`，`name` = 目录名 = `manifest.json` 的 `name`，全局唯一。
 - [ ] `manifest.json` 五字段齐全，`version` 语义化，`protocol_version: 2`。
 - [ ] `main.go`：`sdk.Serve(&plugin{})`、`var version`、`SetHost`、`Handshake` 校验协议版本。
 - [ ] `Handshake` 声明的 `capabilities` 与实际实现的 RPC 一致；未实现的 RPC 用 `UnimplementedClawPluginServer` 兜底。
@@ -446,11 +449,73 @@ go vet ./... && go test ./... && go run ./tools/pack -only <你的插件>
 - [ ] `go run ./tools/pack -only <name>` 可交叉编译成包。
 - [ ] `author` 与 GitHub 用户名一致，提 PR 由 CI 完整交叉编译。
 
+**Lua 插件：**
+
+- [ ] `plugins/plugins-lua/<name>/`，只需 `manifest.json`（name/version/author/label/icon）+ `main.lua`。
+- [ ] `main.lua` 末尾 `return M`，约定函数挂为字段：`handshake` / `chat(req, stream)` / `models` / `login` / `refresh` / `profile`。
+- [ ] `handshake` 校验 `req.protocol_version` 并声明 capabilities/auth_methods（与 Go 插件同构）。
+- [ ] 一切出站只经 `cph.*`（http/json/hash/time/random/log/openai），不绕沙箱。
+- [ ] 只用白名单标准库（base/table/string/math），`require("lib.*")` 仅插件目录内。
+- [ ] `go run ./tools/pack -only <name>` 产出平台无关 `.cphplugin`。
+- [ ] 完整样板：`plugins-lua/autoclaw/main.lua`。
+
 ---
 
 ## 10. 参考
 
 - 契约真身：核心 `sdk/proto/cph.proto`
 - SDK：核心 `sdk/sdk.go`、`sdk/openaiup`、`sdk/anthropicup`、`sdk/responsesup`
-- 样板：核心 `examples/stub`（最小）；本库 `newapi`（auth/account/chat 分层）、`todofor`（WebSocket + 工具协议）、`workbuddy`（任务 + 净化 + 埋点）、`commandcode`（指纹 + NDJSON 解析）
+- 样板：核心 `examples/stub`（最小）；本库 `newapi`（auth/account 分层）、`todofor`（WebSocket + 工具协议）、`workbuddy`（任务 task_* 族 + 净化 + 埋点）、`commandcode`（指纹 + 信封解析）、`mirasim`（中继签名 + 封密）、`warp`（ConnectRPC + 设备授权）
 - 许可证：与核心相同，[AGPL-3.0](LICENSE)
+
+---
+
+## 11. Lua 插件（零编译运行时）
+
+不想写 Go？核心内置 **LuaHost** 运行时（源码 `hosts/luahost`，独立 module），沙箱化 gopher-lua VM。Lua 插件是**脚本目录**，无编译、交叉打包零痛，社区作者只需一个 `main.lua`。
+
+### 11.1 目录与分发
+
+```
+plugins-lua/<name>/
+├── manifest.json   # 只写 name/version/author/label/icon（protocol_version 打包时由 SDK 补）
+├── icon.png        # 可选
+└── main.lua        # 约定函数 return M（可再 require("lib.*") 拆模块）
+```
+
+- **分发**：`tools/pack` 双目录扫描（`plugins/` + `plugins-lua/`），Lua 插件跳过 go build、产平台无关 `.cphplugin`；市场 index.json 条目带 `runtime: "lua"`。
+- **加载**：核心按 `manifest.runtime=="lua"` 分流，启动共享 LuaHost 子进程（一份服务所有 lua 插件，每插件一个进程＝隔离不丢），manager 全程零改动（照标准 go-plugin 处理）；核心升级带来的新内置 LuaHost 开机自动刷新。
+- 样板：`plugins-lua/autoclaw`。
+
+### 11.2 约定函数（`main.lua` 末尾 `return M`，函数挂为字段）
+
+| 函数 | 对应 Go RPC | 说明 |
+| --- | --- | --- |
+| `handshake(req)` | `Handshake` | 声明 capabilities/auth_methods，与 Go 插件 Handshake 同构；缺失时回退 manifest.json |
+| `chat(req, stream)` | `Chat` | `stream` 对象 typed 方法驱动事件流 |
+| `models(cred)` | `ListModels` | 返回模型列表 table |
+| `login(req)` | `Login` | 多步：返回 `next`（含 state）或完成（blob + profile） |
+| `refresh(cred)` | `Refresh` | 返回新 blob + profile |
+| `profile(cred)` | `GetProfile` | 返回账号档案 table |
+
+proto ↔ table 双向映射（snake_case 对齐）。`stream` 对象方法：`message_start` / `content_delta` / `reasoning_delta` / `tool_call_delta` / `message_finish` / `failed`。
+
+### 11.3 宿主能力 `cph.*`（一切出站只经这里）
+
+| 能力 | 说明 |
+| --- | --- |
+| `cph.http.request(method, url, headers, body)` | 回 `{body, status, headers}`；请求未完成 raise。`stream` 支持 `format="openai"` 由宿主解析 SSE 驱动 stream 对象 |
+| `cph.json.encode / decode` | JSON 编解码 |
+| `cph.hash.md5 / sha256 / hmac_sha256 / base64url` | 哈希 / 签名 |
+| `cph.time.now / sleep` | 时间与等待 |
+| `cph.random.uuid / hex` | 随机 |
+| `cph.log(level, msg)` | 落核心统一日志 |
+| `cph.openai.chat_body(envelope)` | 信封 → OpenAI 请求体（方言适配） |
+
+### 11.4 沙箱与限制
+
+- 白名单标准库：`base` / `table` / `string` / `math`；剔除 `dofile` / `load` / `print` / `collectgarbage`。
+- 沙箱化 `require("lib.*")`：仅插件目录内、禁路径逃逸、带模块缓存。
+- VM 复用池；所有 RPC 顶层 `recover()`，Lua 侧错误不崩宿主进程。
+
+写一个 Lua 插件的完整流程与样板见 `plugins-lua/autoclaw/main.lua`（凭据自持、token 刷新、钱包余额、双登录方式俱全）。

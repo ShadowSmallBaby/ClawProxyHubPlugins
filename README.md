@@ -6,7 +6,11 @@
 
 全部插件已升级到契约 **protocol v2**（实例维度）。
 
+插件有两种运行时：**Go 插件**（编译二进制，`plugins/plugins/`）与 **Lua 插件**（脚本，零编译，`plugins/plugins-lua/`，由核心内置的 LuaHost 运行时加载，见 [AGENTS.md](AGENTS.md) §11）。
+
 ## 插件清单
+
+### Go 插件（`plugins/plugins/`）
 
 | 插件 | 说明 | 能力 |
 | --- | --- | --- |
@@ -24,29 +28,49 @@
 | `chatjimmy` | ChatJimmy（chatjimmy.ai）：匿名一键建档免 KEY，私有一次性纯文本响应 | chat / models / login |
 | `improvado` | Improvado Agent：浏览器 Cookie 登录，SSE 纯文本流（无工具调用） | chat / login |
 | `postman` | Postman Agent Mode：API Key（PMAK/PAT）/ 会话 Cookie 登录，反代团队子域网关 `/_gw/chat`（私有 SSE）；多团队（各团队子域建实例填 `base_url`） | chat / models / login / refresh / account / instances |
+| `codebuff` | Codebuff（Freebuff 免费层）：粘贴 Bearer token（裸 token / curl / HAR 嗅探），OpenAI 兼容 + session/run 编排 | chat / models / login / refresh |
+| `doubao` | 豆包（www.doubao.com）：Cookie 导入免 KEY，桌面客户端 SSE 私有协议 | chat / models / login |
+| `ima` | 腾讯 ima：微信扫码 / Cookie 导入，SSE 私有协议（带刷新 token 自动续期） | chat / models / login / refresh |
+| `joycode` | JoyCode（京东 AI 编程助手）：JD pt_key + userId 登录，color gateway HMAC 签名 OpenAI 兼容端点 | chat / models / login / refresh |
+| `mimo` | Xiaomi MiMo：passToken 凭据导入 → 小米 SSO 换 serviceToken（401 自动刷新），OpenAI 兼容直通透传 | chat / models / login / refresh |
+| `puter` | Puter 驱动调用反代：粘贴浏览器 auth_token（whoami 校验 + 月用量），NDJSON 流 | chat / models / login / refresh |
+| `warp` | Warp 多代理 API：设备授权登录 → Firebase refresh token 周期续期，官方 ConnectRPC 协议 | chat / models / login / refresh |
+| `zcode` | ZCode Proxy（GLM 编码套餐）：OAuth 设备码登录，Anthropic 端点直连（双密钥）+ JWT 网关 | chat / models / login / refresh / account |
+
+### Lua 插件（`plugins/plugins-lua/`）
+
+零 Go、零编译：一个目录一个插件，只需 `manifest.json`（name/version/author/label/icon）+ `main.lua`，CI 打平台无关 `.cphplugin`，由核心内置的 [LuaHost](../hosts/luahost) 运行时加载执行。
+
+| 插件 | 说明 | 能力 |
+| --- | --- | --- |
+| `autoclaw` | AutoClaw（智谱 AutoGLM 加速上游）：手机验证码 / 凭据导入登录，token 自持（refresh_token 换 access_token，无需桌面端常驻），钱包余额 | chat / models / login / refresh |
 
 ### 开发中 / 规划中
 
 | 插件 | 说明 | 状态 |
 | --- | --- | --- |
-| `codebuff` | Codebuff 反代 | 🚧 开发中 |
-| `joycode` | JoyCode 反代 | 🚧 开发中 |
-| `devin` | Devin 反代 | 📋 规划中 |
-
-> 开发中 / 规划中的插件源码尚未齐备，CI 暂不打包，市场也不会展示，仅在此记录路线图。
+| `devin` | Devin / Windsurf 反代 | 📋 开发中 |
+| `loomy` | Loomy 反代 | 📋 规划中 |
 
 ## 目录约定
 
 ```
-plugins/<name>/
-├── manifest.json   # name（= 目录名）、version、author、label、icon、protocol_version
-├── icon.png        # 可选，正方形 PNG 128–256px
-└── *.go            # package main，入口 sdk.Serve(&plugin{})
-tools/pack/         # 打包器：交叉编译 + .cphplugin + index.json
-index.json          # 市场索引（CI 生成回写，勿手改）
+plugins/
+├── plugins/<name>/       # Go 插件
+│   ├── manifest.json     # name（= 目录名）、version、author、label、icon
+│   ├── icon.png          # 可选，正方形 PNG 128–256px
+│   └── *.go              # package main，入口 sdk.Serve(&plugin{})
+├── plugins-lua/<name>/   # Lua 插件（零编译）
+│   ├── manifest.json     # 同上（无需 protocol_version，打包时由 SDK 补）
+│   ├── icon.png
+│   └── main.lua          # 约定函数 return M（handshake/chat/models/login/refresh/profile）
+├── tools/pack/           # 打包器：Go 交叉编译 / Lua 平台无关包，统一 .cphplugin + index.json
+└── index.json            # 市场索引（CI 生成回写，勿手改；条目带 runtime 字段）
 ```
 
-插件实现 `pb.ClawPluginServer`（契约见核心 `sdk/proto/cph.proto`），复用 `sdk/openaiup` / `sdk/anthropicup` / `sdk/responsesup` 适配 OpenAI / Anthropic / Responses 方言上游；宿主回调（日志 / 存储 / 代理 / 设置）实现 `sdk.HostAware`。
+Go 插件实现 `pb.ClawPluginServer`（契约见核心 `sdk/proto/cph.proto`），复用 `sdk/openaiup` / `sdk/anthropicup` / `sdk/responsesup` 适配 OpenAI / Anthropic / Responses 方言上游；宿主回调（日志 / 存储 / 代理 / 设置）实现 `sdk.HostAware`。
+
+Lua 插件跑在核心内置的 LuaHost 沙箱 VM 里：约定函数 `handshake/chat/models/login/refresh/profile`（与 Go 插件 Handshake 同构），宿主能力 `cph.*`（http/json/hash/time/random/log/openai）承接一切出站与日志。
 
 契约细节、能力实现范式、多实例说明与文件分层建议见 **[AGENTS.md](AGENTS.md)**。参考核心 `examples/stub` 与既有插件。
 
@@ -73,15 +97,15 @@ go run ./tools/pack            # dist/<name>-<version>.cphplugin + dist/index.js
 go run ./tools/pack -only workbuddy
 ```
 
-- 包格式：zip，含 `manifest.json`、图标与 `plugin-<os>-<arch>[.exe]`（windows/amd64、linux/amd64、linux/arm64、darwin/amd64、darwin/arm64）；固定时间戳，同一输入产出同一 sha256
+- 包格式：统一 `.cphplugin`（zip 容器），含 `manifest.json`、图标与 `plugin-<os>-<arch>[.exe]`（windows/amd64、linux/amd64、linux/arm64、darwin/amd64、darwin/arm64）；Lua 插件跳过 go build、产平台无关 `.cphplugin`（包内只含 `main.lua` + 可选 `lib/*.lua`）；固定时间戳，同一输入产出同一 sha256。市场条目带 `runtime` 字段（`go` / `lua`）
 - 发布：改 `manifest.json` 的 `version` → 合入 main → CI 为每个新版本创建 Release `<name>-v<version>`（资产 `<name>-<version>.cphplugin`）并回写 `index.json`
 - 已发布版本不可变：改代码必须升版本，否则 CI 跳过该插件
 - 核心默认市场地址：`https://raw.githubusercontent.com/ShadowSmallBaby/ClawProxyHubPlugins/main/index.json`
 
 ## 贡献
 
-1. fork → `plugins/<你的插件>/` 开发（`manifest.json` 的 `author` 与 GitHub 用户名一致）
-2. `go vet ./... && go test ./... && go run ./tools/pack -only <你的插件>` 确认可构建
+1. fork → `plugins/plugins/<你的插件>/`（Go）或 `plugins/plugins-lua/<你的插件>/`（Lua）开发（`manifest.json` 的 `author` 与 GitHub 用户名一致）
+2. Go：`go vet ./... && go test ./... && go run ./tools/pack -only <你的插件>` 确认可构建；Lua：`go run ./tools/pack -only <你的插件>` 可打包即可
 3. 提 PR，CI 会完整交叉编译一遍
 
 ## 许可证
