@@ -1,21 +1,14 @@
 // Package shared 提供各插件通用且行为一致的纯工具函数，供插件直接 import。
-// 仅收纳可安全统一的实现；与插件内部协议耦合的逻辑（如 credFrom）留在各插件内。
+// 传输/SSE/代理相关已迁至 sdk（统一请求+日志层）；此处保留历史兼容薄封装。
 package shared
 
 import (
-	"bytes"
-	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
-	"strings"
-	"time"
 
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk"
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
 )
 
@@ -53,101 +46,30 @@ func Truncate(s string, n int) string {
 }
 
 // ProxyURL 把 ProxyConfig 渲染成 http 代理 URL，未配置时返回空串。
-func ProxyURL(p *pb.ProxyConfig) string {
-	if p == nil || p.GetHost() == "" {
-		return ""
-	}
-	u := &url.URL{
-		Scheme: OrDefault(p.GetScheme(), "http"),
-		Host:   fmt.Sprintf("%s:%d", p.GetHost(), p.GetPort()),
-	}
-	if p.GetUsername() != "" {
-		u.User = url.UserPassword(p.GetUsername(), p.GetPassword())
-	}
-	return u.String()
-}
+//
+// Deprecated: 用 sdk.ProxyURL。
+func ProxyURL(p *pb.ProxyConfig) string { return sdk.ProxyURL(p) }
 
 // UpstreamClient 构造访问上游的 HTTP 客户端，proxyURL 非空时走该代理。
-func UpstreamClient(proxyURL string) *http.Client {
-	transport := &http.Transport{
-		DialContext:           (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 60 * time.Second,
-		IdleConnTimeout:       90 * time.Second,
-	}
-	if proxyURL != "" {
-		if u, err := url.Parse(proxyURL); err == nil {
-			transport.Proxy = http.ProxyURL(u)
-		}
-	}
-	return &http.Client{Transport: transport}
-}
+//
+// Deprecated: 用 sdk.UpstreamClient（或 StreamSSE/HTTPRequest.Proxy 让 sdk 自建）。
+func UpstreamClient(proxyURL string) *http.Client { return sdk.UpstreamClient(proxyURL) }
 
-// SSEParser 消费上游 SSE 行流的解析器契约（各插件的方言 Parser 都实现它）。
-type SSEParser interface {
-	Feed(string)
-	Finish()
-	FinishWithError(int32, string)
-}
+// SSEParser 消费上游 SSE 行流的解析器契约。
+//
+// Deprecated: 契约已迁至 sdk.SSEParser（本别名保持既有实现零改动）。
+type SSEParser = sdk.SSEParser
 
-// ScanSSE 逐行扫描上游 SSE：无 data 事件视为空流（502），断流报错（502），
-// 正常结束调用 Finish。分块读取，对超长行无缓冲上限。
-func ScanSSE(body io.Reader, parser SSEParser) error {
-	tmp := make([]byte, 64*1024)
-	var pending string
-	sawEvent := false
-	for {
-		n, err := body.Read(tmp)
-		if n > 0 {
-			scanned := pending + string(tmp[:n])
-			pending = ""
-			for {
-				i := strings.IndexByte(scanned, '\n')
-				if i < 0 {
-					break
-				}
-				line := strings.TrimSuffix(scanned[:i], "\r")
-				scanned = scanned[i+1:]
-				if strings.HasPrefix(line, "data:") && !strings.Contains(line, "[DONE]") {
-					sawEvent = true
-				}
-				parser.Feed(line)
-			}
-			pending = scanned
-		}
-		if err != nil {
-			if len(pending) > 0 {
-				parser.Feed(pending)
-			}
-			if err != io.EOF {
-				parser.FinishWithError(502, "upstream stream broken: "+err.Error())
-				return nil
-			}
-			break
-		}
-	}
-	if !sawEvent {
-		parser.FinishWithError(502, "upstream returned an empty stream")
-		return nil
-	}
-	parser.Finish()
-	return nil
-}
+// ScanSSE 逐行扫描上游 SSE：无 data 事件视为空流(502)，断流(502)，正常结束 Finish。
+//
+// Deprecated: 用 host.StreamSSE（带统一日志）或 sdk.ScanSSE（仅扫描）。
+func ScanSSE(body io.Reader, parser SSEParser) error { return sdk.ScanSSE(body, parser) }
 
 // Failed 构造 TaskFailed 事件。
 func Failed(code int32, msg string) *pb.StreamEvent {
 	return &pb.StreamEvent{
 		Event: &pb.StreamEvent_TaskFailed{
 			TaskFailed: &pb.TaskFailed{Error: &pb.Error{Code: code, Message: msg}},
-		},
-	}
-}
-
-// FailedRetryable 构造带 retryable 标记的 TaskFailed 事件。
-func FailedRetryable(code int32, msg string, retryable bool) *pb.StreamEvent {
-	return &pb.StreamEvent{
-		Event: &pb.StreamEvent_TaskFailed{
-			TaskFailed: &pb.TaskFailed{Error: &pb.Error{Code: code, Message: msg, Retryable: retryable}},
 		},
 	}
 }
@@ -167,36 +89,4 @@ func ReadLimitedResp(resp *http.Response, limit int64) []byte {
 		return nil
 	}
 	return ReadLimited(resp.Body, limit)
-}
-
-// ShortID 截取 ID 前 8 字符用于日志展示。
-func ShortID(s string) string {
-	if len(s) > 8 {
-		return s[:8]
-	}
-	return s
-}
-
-// PostRaw 用给定头部 POST 原始字节，client 为 nil 时用默认直连客户端。
-func PostRaw(ctx context.Context, client *http.Client, rawURL string, headers map[string]string, body []byte) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	if client == nil {
-		client = UpstreamClient("")
-	}
-	return client.Do(req)
-}
-
-// PostJSON 序列化 body 后 POST，其余同 PostRaw。
-func PostJSON(ctx context.Context, client *http.Client, rawURL string, headers map[string]string, body any) (*http.Response, error) {
-	raw, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	return PostRaw(ctx, client, rawURL, headers, raw)
 }
