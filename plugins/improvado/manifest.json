@@ -1,0 +1,11 @@
+{
+  "name": "improvado",
+  "version": "0.1.0",
+  "author": "cph",
+  "label": {
+    "zh": "Improvado",
+    "en": "Improvado"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
