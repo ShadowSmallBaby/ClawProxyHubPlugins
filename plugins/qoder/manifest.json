@@ -1,0 +1,11 @@
+{
+  "name": "qoder",
+  "version": "0.1.0",
+  "author": "cph",
+  "label": {
+    "zh": "Qoder CN",
+    "en": "Qoder CN"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
