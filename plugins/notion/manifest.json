@@ -1,0 +1,11 @@
+{
+  "name": "notion",
+  "version": "0.1.0",
+  "author": "cph",
+  "label": {
+    "zh": "Notion AI",
+    "en": "Notion AI"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
