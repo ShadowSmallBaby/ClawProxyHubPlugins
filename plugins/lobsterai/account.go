@@ -102,7 +102,8 @@ func (p *plugin) checkinSection(ctx context.Context, cred *credential) *pb.Profi
 		return nil
 	}
 	var slot struct {
-		Activity struct {
+		SlotState string `json:"slotState"`
+		Activity  struct {
 			ActivityCode   string `json:"activityCode"`
 			ConfigRevision int    `json:"configRevision"`
 		} `json:"activity"`
@@ -116,6 +117,10 @@ func (p *plugin) checkinSection(ctx context.Context, cred *credential) *pb.Profi
 	}
 	if code == "" {
 		return nil // 无活动
+	}
+	// 槽位非 available（未投放/已下线）时不渲染签到块
+	if slot.SlotState != "" && slot.SlotState != "available" {
+		return nil
 	}
 	ctxReq, _ := http.NewRequestWithContext(ctx, "GET",
 		serverBase+"/api/client-activities/"+code+"/context?configRevision="+fmt.Sprint(revision), nil)

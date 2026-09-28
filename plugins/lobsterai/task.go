@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
 	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
@@ -56,7 +57,8 @@ func (p *plugin) RunTask(ctx context.Context, req *pb.RunTaskRequest) (*pb.RunTa
 		return activityResult(err)
 	}
 	var slot struct {
-		Activity struct {
+		SlotState string `json:"slotState"`
+		Activity  struct {
 			ActivityCode   string `json:"activityCode"`
 			ConfigRevision int    `json:"configRevision"`
 		} `json:"activity"`
@@ -70,6 +72,10 @@ func (p *plugin) RunTask(ctx context.Context, req *pb.RunTaskRequest) (*pb.RunTa
 	}
 	if code == "" {
 		return &pb.RunTaskResponse{Summary: "当前无签到活动"}, nil
+	}
+	// 槽位非 available（未投放/已下线）时不应继续
+	if slot.SlotState != "" && slot.SlotState != "available" {
+		return &pb.RunTaskResponse{Summary: "无可用活动（slotState=" + slot.SlotState + "）"}, nil
 	}
 
 	// 2. 活动状态（今天签没签）
@@ -92,16 +98,30 @@ func (p *plugin) RunTask(ctx context.Context, req *pb.RunTaskRequest) (*pb.RunTa
 			ClaimedToday bool `json:"claimedToday"`
 			ClaimedDays  int  `json:"claimedDays"`
 			// 兼容旧字段形状
-			TodayCheckedIn bool `json:"todayCheckedIn"`
-			StreakDays     int  `json:"streakDays"`
+			TodayCheckedIn bool   `json:"todayCheckedIn"`
+			StreakDays     int    `json:"streakDays"`
+			Actions        string `json:"actions"`
 		} `json:"state"`
-		ClaimedToday   bool `json:"claimedToday"`
-		ClaimedDays    int  `json:"claimedDays"`
-		TodayCheckedIn bool `json:"todayCheckedIn"`
-		StreakDays     int  `json:"streakDays"`
+		ClaimedToday   bool     `json:"claimedToday"`
+		ClaimedDays    int      `json:"claimedDays"`
+		TodayCheckedIn bool     `json:"todayCheckedIn"`
+		StreakDays     int      `json:"streakDays"`
+		Actions        []string `json:"actions"`
 	}
 	_ = json.Unmarshal(ctxData, &state)
+	// 活动有但当前不可签到（未开始/已结束/无资格）：与「今天已领」区分，
+	// 只看 claimedToday 会漏掉这种情形
+	actions := state.Actions
+	if len(actions) == 0 && state.State.Actions != "" {
+		actions = []string{state.State.Actions}
+	}
 	checked := state.State.ClaimedToday || state.ClaimedToday || state.State.TodayCheckedIn || state.TodayCheckedIn
+	if !checked && len(actions) > 0 {
+		hasCheckin := slices.Contains(actions, "check_in")
+		if !hasCheckin {
+			return &pb.RunTaskResponse{Summary: "当前不可签到"}, nil
+		}
+	}
 	if checked {
 		streak := state.State.ClaimedDays
 		if streak == 0 {
@@ -133,8 +153,13 @@ func (p *plugin) RunTask(ctx context.Context, req *pb.RunTaskRequest) (*pb.RunTa
 	}
 	var result struct {
 		Result struct {
-			Replayed bool `json:"replayed"`
-			Rewards  []struct {
+			Replayed bool   `json:"replayed"`
+			Message  string `json:"message"`
+			// 积分字段三级回退：creditsGranted → rewardCredits → credits
+			CreditsGranted float64 `json:"creditsGranted"`
+			RewardCredits  float64 `json:"rewardCredits"`
+			Credits        float64 `json:"credits"`
+			Rewards        []struct {
 				Amount int    `json:"amount"`
 				Type   string `json:"type"`
 			} `json:"rewards"`
@@ -142,8 +167,21 @@ func (p *plugin) RunTask(ctx context.Context, req *pb.RunTaskRequest) (*pb.RunTa
 	}
 	_ = json.Unmarshal(actionData, &result)
 	summary := "签到成功"
-	if len(result.Result.Rewards) > 0 {
-		summary = fmt.Sprintf("签到成功，积分 +%d", result.Result.Rewards[0].Amount)
+	credit := result.Result.CreditsGranted
+	if credit == 0 {
+		credit = result.Result.RewardCredits
+	}
+	if credit == 0 {
+		credit = result.Result.Credits
+	}
+	if credit == 0 && len(result.Result.Rewards) > 0 {
+		credit = float64(result.Result.Rewards[0].Amount)
+	}
+	if credit > 0 {
+		summary = fmt.Sprintf("签到成功，积分 +%s", trimFloat(credit))
+	}
+	if result.Result.Message != "" {
+		summary += "：" + result.Result.Message
 	}
 	if result.Result.Replayed {
 		summary += "（幂等重放，未重复发分）"
