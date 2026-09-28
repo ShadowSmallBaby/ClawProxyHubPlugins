@@ -36,6 +36,18 @@
     "sha256": "2745c925c3ca5eca9562b7ef5472e060d67bfcf03adefa69285d21aa01ea5b69"
   },
   {
+    "name": "codearts",
+    "version": "0.1.0",
+    "author": "cph",
+    "label": {
+      "en": "CodeArts",
+      "zh": "CodeArts"
+    },
+    "published_at": "2026-09-28",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/codearts-v0.1.0/codearts-0.1.0.cphplugin",
+    "sha256": "c6287b98a2ee05d94b285e0ff55bed7f15250c26063ff33b1c335fb0aaf3fbe3"
+  },
+  {
     "name": "codebuff",
     "version": "0.1.1",
     "author": "cph",
