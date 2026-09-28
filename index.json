@@ -25,15 +25,15 @@
   },
   {
     "name": "cline",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "author": "cph",
     "label": {
       "en": "Cline",
       "zh": "Cline"
     },
     "published_at": "2026-09-28",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cline-v0.1.4/cline-0.1.4.cphplugin",
-    "sha256": "2745c925c3ca5eca9562b7ef5472e060d67bfcf03adefa69285d21aa01ea5b69"
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cline-v0.1.5/cline-0.1.5.cphplugin",
+    "sha256": "f5144a50a5100a33b1398643868300d3eefaf20cc6795afdc3e022407b40fcb3"
   },
   {
     "name": "codearts",
@@ -133,27 +133,27 @@
   },
   {
     "name": "lobsterai",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "author": "cph",
     "label": {
       "en": "LobsterAI",
       "zh": "LobsterAI"
     },
     "published_at": "2026-09-28",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.6/lobsterai-0.1.6.cphplugin",
-    "sha256": "5c314996bc048a95c3792bd105654dc8941bdf8b9ce71ba31335df638c03eb02"
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.7/lobsterai-0.1.7.cphplugin",
+    "sha256": "3d167c0354dc51e12544ca222a54925e18434c6d79445b84398da1598c68a810"
   },
   {
     "name": "loomy",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "author": "cph",
     "label": {
       "en": "Loomy",
       "zh": "Loomy"
     },
     "published_at": "2026-09-28",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/loomy-v0.1.0/loomy-0.1.0.cphplugin",
-    "sha256": "233805ebe8222891a834903f643261f80193c21094c8252d231af35378b416c3"
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/loomy-v0.1.1/loomy-0.1.1.cphplugin",
+    "sha256": "8b24964c5510e87149ec324f7aed253387181abea657922877d3b78df522e5c0"
   },
   {
     "name": "mimo",
