@@ -1,0 +1,11 @@
+{
+  "name": "trae",
+  "version": "0.1.0",
+  "author": "cph",
+  "label": {
+    "zh": "TRAE CN",
+    "en": "TRAE CN"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
