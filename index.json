@@ -264,6 +264,18 @@
     "sha256": "67edc6f320f34058129eb38fdb15e32fcad30406aef6db178190a51c964ff328"
   },
   {
+    "name": "trae",
+    "version": "0.1.0",
+    "author": "cph",
+    "label": {
+      "en": "TRAE CN",
+      "zh": "TRAE CN"
+    },
+    "published_at": "2026-09-28",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/trae-v0.1.0/trae-0.1.0.cphplugin",
+    "sha256": "3597625bf5ee5c5400b972f4b51a01aa3b0cc66df82fae35fb168508bef67bbf"
+  },
+  {
     "name": "workbuddy",
     "version": "0.1.7",
     "author": "cph",
