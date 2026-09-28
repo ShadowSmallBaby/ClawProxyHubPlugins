@@ -252,6 +252,18 @@
     "sha256": "cffae66fb89d2ecd7d3b6ce0be6e3b70d95d449ff936a533729d74fab0f29540"
   },
   {
+    "name": "raccoon",
+    "version": "0.1.0",
+    "author": "cph",
+    "label": {
+      "en": "Raccoon",
+      "zh": "Raccoon"
+    },
+    "published_at": "2026-09-28",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/raccoon-v0.1.0/raccoon-0.1.0.cphplugin",
+    "sha256": "10dd3e9ba4ae2cc9331138d9cfdc050ab0ce00b4a7fa3964bb6e5cf5c4593bcb"
+  },
+  {
     "name": "todofor",
     "version": "0.1.1",
     "author": "cph",
