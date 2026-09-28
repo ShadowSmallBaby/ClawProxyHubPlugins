@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -333,6 +334,9 @@ func loadManifest(name string) (*manifest, error) {
 	if mf.Version == "" || mf.Author == "" {
 		return nil, fmt.Errorf("manifest.json requires version and author")
 	}
+	if mf.Label["zh"] == "" || mf.Label["en"] == "" {
+		return nil, fmt.Errorf("manifest.json requires label.zh and label.en")
+	}
 	if mf.Icon != "" {
 		if _, err := os.Stat(filepath.Join(root, name, mf.Icon)); err != nil {
 			return nil, fmt.Errorf("icon %q: %w", mf.Icon, err)
@@ -493,7 +497,7 @@ func copyFile(src, dst string) error {
 
 func csv(s string) map[string]bool {
 	out := map[string]bool{}
-	for _, p := range strings.Split(s, ",") {
+	for p := range strings.SplitSeq(s, ",") {
 		if p = strings.TrimSpace(p); p != "" {
 			out[p] = true
 		}
@@ -502,10 +506,5 @@ func csv(s string) map[string]bool {
 }
 
 func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, s)
 }

@@ -29,10 +29,10 @@ type plugin struct {
 	pb.UnimplementedClawPluginServer
 	host *sdk.Host
 
-	mu        sync.Mutex
-	oauth     map[string]*oauthSession // state → 进行中的授权会话（单条，覆盖旧的）
-	oauthCB   *callbackServer          // 进行中的本地回调 server（懒起，完成/超时即关）
-	settingsJSON []byte                // 插件设置缓存（30s）
+	mu           sync.Mutex
+	oauth        map[string]*oauthSession // state → 进行中的授权会话（单条，覆盖旧的）
+	oauthCB      *callbackServer          // 进行中的本地回调 server（懒起，完成/超时即关）
+	settingsJSON []byte                   // 插件设置缓存（30s）
 	settingsAt   time.Time
 }
 
@@ -78,7 +78,7 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 	}
 	return &pb.HandshakeResponse{Manifest: &pb.Manifest{
 		Name: pluginName, Version: version, Author: "cph",
-		Label:           map[string]string{"zh": "TRAE (字节)", "en": "TRAE (ByteDance)"},
+		Label:           map[string]string{"zh": "TRAE", "en": "TRAE"},
 		ProtocolVersion: sdk.ProtocolVersion,
 		Capabilities:    []string{"chat", "models", "login", "refresh", "account", "tasks"},
 		Endpoints:       []string{"chat_completions"},
@@ -92,17 +92,17 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 				Id: "token_import", Label: map[string]string{"zh": "Token 导入", "en": "Token Import"}, Capabilities: []string{"profile"},
 				Fields: []*pb.AuthField{
 					{
-						Name:     "access_token",
-						Label:    map[string]string{"zh": "access_token", "en": "access_token"},
-						Type:     "textarea",
-						Required: true,
+						Name:        "access_token",
+						Label:       map[string]string{"zh": "access_token", "en": "access_token"},
+						Type:        "textarea",
+						Required:    true,
 						Placeholder: "Cloud-IDE-JWT token（抓包 X-Cloudide-Token 或登录页获取）",
 					},
 					{
-						Name:        "refresh_token",
-						Label:       map[string]string{"zh": "refresh_token（可选）", "en": "refresh_token (optional)"},
-						Type:        "textarea",
-						Required:    false,
+						Name:     "refresh_token",
+						Label:    map[string]string{"zh": "refresh_token（可选）", "en": "refresh_token (optional)"},
+						Type:     "textarea",
+						Required: false,
 					},
 					{
 						Name:        "uid",

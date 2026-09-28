@@ -107,7 +107,7 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 	}
 	return &pb.HandshakeResponse{Manifest: &pb.Manifest{
 		Name: pluginName, Version: version, Author: "cph",
-		Label:           map[string]string{"zh": "Raccoon (商汤)", "en": "Raccoon (SenseTime)"},
+		Label:           map[string]string{"zh": "Raccoon", "en": "Raccoon"},
 		ProtocolVersion: sdk.ProtocolVersion,
 		Capabilities:    []string{"chat", "models", "login", "refresh", "account", "tasks"},
 		Endpoints:       []string{"chat_completions", "messages"},

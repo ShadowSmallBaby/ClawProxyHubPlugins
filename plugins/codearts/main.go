@@ -76,7 +76,7 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 	}
 	return &pb.HandshakeResponse{Manifest: &pb.Manifest{
 		Name: pluginName, Version: version, Author: "cph",
-		Label:           map[string]string{"zh": "CodeArts（华为云）", "en": "CodeArts (Huawei)"},
+		Label:           map[string]string{"zh": "CodeArts", "en": "CodeArts"},
 		ProtocolVersion: sdk.ProtocolVersion,
 		Capabilities:    []string{"chat", "models", "login", "refresh", "account", "tasks"},
 		Endpoints:       []string{"chat_completions"},
@@ -88,10 +88,10 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 				Capabilities: []string{"profile", "refreshable"},
 				Fields: []*pb.AuthField{
 					{
-						Name:     "access_key",
-						Label:    map[string]string{"zh": "Access Key", "en": "Access Key"},
-						Type:     "text",
-						Required: true,
+						Name:        "access_key",
+						Label:       map[string]string{"zh": "Access Key", "en": "Access Key"},
+						Type:        "text",
+						Required:    true,
 						Placeholder: "IAM 用户 Access Key（myhuaweicloud.com → 我的凭证）",
 					},
 					{
