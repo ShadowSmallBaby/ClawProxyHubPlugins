@@ -480,11 +480,7 @@ function plugin.handshake(req)
   end
   return {
     manifest = {
-      name = "autoclaw",
-      version = "0.5.0",
-      author = "cph",
       label = { zh = "AutoClaw", en = "AutoClaw" },
-      protocol_version = 2,
       capabilities = { "chat", "models", "login", "refresh" },
       endpoints = { "chat_completions", "messages" },
       auth_methods = {
