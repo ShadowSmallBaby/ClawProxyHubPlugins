@@ -1,5 +1,17 @@
 [
   {
+    "name": "autoclaw",
+    "version": "0.1.0",
+    "author": "cph",
+    "runtime": "lua",
+    "label": {
+      "en": "AutoClaw",
+      "zh": "AutoClaw"
+    },
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/autoclaw-v0.1.0/autoclaw-0.1.0.cphplugin",
+    "sha256": "41b0f041e142f21d0619580fa25b0523977473278918eb45058d01e8563066f4"
+  },
+  {
     "name": "chatjimmy",
     "version": "0.1.1",
     "author": "cph",
