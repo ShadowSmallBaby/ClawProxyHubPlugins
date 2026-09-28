@@ -1,0 +1,11 @@
+{
+  "name": "raccoon",
+  "version": "0.1.0",
+  "author": "cph",
+  "label": {
+    "zh": "Raccoon",
+    "en": "Raccoon"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
