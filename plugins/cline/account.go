@@ -59,9 +59,10 @@ func (p *plugin) fetchBalance(ctx context.Context, c *credential, profile *pb.Ac
 			balance, _ = n.Float64()
 		}
 	}
-	// 照官方 normalizeCreditBalance：balance 单位是百万分之一美元（microUSD），
-	// 展示前 / 1_000_000 折成美元。免费账号 balance=0 也照写（积分栏显 0 而非空缺）。
-	dollars := balance / 1_000_000
+	// balance 单位是百万分之一美元（microUSD），展示前折成美元。
+	// 不可用 /usages 的 costUsd 反推本系数（口径不同）；
+	// 若核对不符，只改这一个常数。
+	dollars := balance / 100_000
 	// remaining/total 是核心前端积分列的标准键（Accounts.vue 读 credits.remaining/total）
 	profile.Quota["remaining"] = formatUSD(dollars)
 	profile.Quota["total"] = formatUSD(dollars)
