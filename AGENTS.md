@@ -497,6 +497,8 @@ plugins-lua/<name>/
 | `login(req)` | `Login` | 多步：返回 `next`（含 state）或完成（blob + profile） |
 | `refresh(cred)` | `Refresh` | 返回新 blob + profile |
 | `profile(cred)` | `GetProfile` | 返回账号档案 table |
+| `tasks()` | `ListTaskCapabilities` | 声明任务能力列表；缺失回空（未声明任务能力） |
+| `task(req)` | `RunTask` | 执行能力：返回 `{summary, changed, blob, detail_json, notification, error}`；任务骨架见核心 `examples/luatask/main.lua` |
 
 proto ↔ table 双向映射（snake_case 对齐）。`stream` 对象方法：`message_start` / `content_delta` / `reasoning_delta` / `tool_call_delta` / `message_finish` / `failed`。
 
