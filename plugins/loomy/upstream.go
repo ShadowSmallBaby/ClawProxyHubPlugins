@@ -149,6 +149,50 @@ func (p *plugin) openStream(ctx context.Context, cred *credential, payload map[s
 	return nil, last
 }
 
+// postJSON POST 业务接口（first-login 等写端点）；401/403 → 鉴权错误。
+func (p *plugin) postJSON(ctx context.Context, cred *credential, path string, body map[string]interface{}) (map[string]interface{}, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+path, bytes.NewBufferString(jsonEncode(body)))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", cred.Cookie)
+	req.Header.Set("Origin", baseURL)
+	req.Header.Set("Referer", baseURL+"/web")
+	req.Header.Set("User-Agent", p.userAgentStr())
+
+	resp, err := p.hc(cred).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw := shared.ReadLimitedResp(resp, 64*1024)
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return nil, loomyErrf(resp.StatusCode, "HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 200))
+	}
+	if resp.StatusCode != 200 {
+		return nil, loomyErrf(resp.StatusCode, "HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 200))
+	}
+	var obj map[string]interface{}
+	if err := json.Unmarshal(raw, &obj); err != nil {
+		return nil, fmt.Errorf("响应解析失败: %w", err)
+	}
+	return obj, nil
+}
+
+// jsonEncode 简单对象序列化（任务上报体只有空对象/简单键值）。
+func jsonEncode(body map[string]interface{}) string {
+	if len(body) == 0 {
+		return "{}"
+	}
+	b, err := json.Marshal(body)
+	if err != nil {
+		return "{}"
+	}
+	return string(b)
+}
+
 // getJSON GET 额度 / 身份接口；401/403 → 鉴权错误。
 func (p *plugin) getJSON(ctx context.Context, cred *credential, path string) (map[string]interface{}, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+path, nil)

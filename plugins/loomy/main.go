@@ -88,7 +88,7 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 		Name: pluginName, Version: version, Author: "cph",
 		Label:           map[string]string{"zh": "Loomy", "en": "Loomy"},
 		ProtocolVersion: sdk.ProtocolVersion,
-		Capabilities:    []string{"chat", "models", "login", "refresh", "account"},
+		Capabilities:    []string{"chat", "models", "login", "refresh", "account", "tasks"},
 		Endpoints:       []string{"chat_completions", "messages"},
 		SettingsSchema:  settingsSchema,
 		AuthMethods: []*pb.AuthMethod{
