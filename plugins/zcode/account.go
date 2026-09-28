@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strings"
 
-	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
 	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
@@ -194,52 +193,6 @@ func (p *plugin) getSecretKey(ctx context.Context, host, authz, orgID, projID, a
 	return copied.SecretKey, nil
 }
 
-// ---------- 模型目录 ----------
-
-// glmModel 静态目录条目（与上游 MODELS 同源，规格经 ZCode 3.11.2 校准）。
-type glmModel struct {
-	ID            string
-	Label         string
-	CtxWindow     int32
-	MaxOut        int32
-	Reasoning     bool
-	StartPlanOnly bool
-}
-
-var glmModels = []glmModel{
-	{ID: "glm-4.5-air", Label: "GLM 4.5 Air", CtxWindow: 131072, MaxOut: 98304, Reasoning: true},
-	{ID: "glm-4.6", Label: "GLM 4.6", CtxWindow: 200000, MaxOut: 131072, Reasoning: true},
-	{ID: "glm-4.6v", Label: "GLM 4.6V", CtxWindow: 131072, MaxOut: 32768},
-	{ID: "glm-4.7", Label: "GLM 4.7", CtxWindow: 200000, MaxOut: 131072, Reasoning: true},
-	{ID: "glm-5", Label: "GLM 5", CtxWindow: 200000, MaxOut: 64000, Reasoning: true},
-	{ID: "glm-5-turbo", Label: "GLM 5 Turbo", CtxWindow: 200000, MaxOut: 64000, Reasoning: true},
-	{ID: "glm-5v-turbo", Label: "GLM 5V Turbo", CtxWindow: 200000, MaxOut: 131072},
-	{ID: "glm-5.1", Label: "GLM 5.1", CtxWindow: 200000, MaxOut: 64000, Reasoning: true},
-	{ID: "glm-5.2", Label: "GLM 5.2", CtxWindow: 1000000, MaxOut: 128000, Reasoning: true},
-	{ID: "glm-5.3", Label: "GLM 5.3", CtxWindow: 1000000, MaxOut: 128000, Reasoning: true},
-	// start-plan 网关专属变体（体验套餐用）
-	{ID: "glm-5.3-flash", Label: "GLM 5.3 Flash", CtxWindow: 1000000, MaxOut: 128000, Reasoning: true, StartPlanOnly: true},
-}
-
-// listModels 拉上游模型目录（静态表；凭据有效性与 GetProfile 走 billing）。
-func (p *plugin) listModels(ctx context.Context, c *credential) ([]*pb.ModelInfo, error) {
-	var out []*pb.ModelInfo
-	for _, m := range glmModels {
-		if m.StartPlanOnly && c != nil && c.Plan != "start-plan" {
-			continue
-		}
-		out = append(out, &pb.ModelInfo{
-			Id:             m.ID,
-			Label:          map[string]string{"en": m.Label},
-			ContextWindow:  m.CtxWindow,
-			SupportsTools:  true,
-			SupportsStream: true,
-		})
-	}
-	return out, nil
-}
-
-// quote JSON 字符串字面量。
 func quote(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
