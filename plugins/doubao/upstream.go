@@ -2,7 +2,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -153,7 +152,7 @@ func buildCompletionPayload(text string, deepThink int, botID string) map[string
 
 // chatCompletion 发起 /chat/completion SSE 流并逐事件回调。
 // 返回 HTTP/解析层错误；业务错误经 onEvent(SSE 事件 JSON) 内处理。
-func (p *plugin) chatCompletion(cred *credential, req *pb.ChatRequest, model string,
+func (p *plugin) chatCompletion(ctx context.Context, cred *credential, req *pb.ChatRequest, model string,
 	onSSE func(name string, data []byte) error) error {
 
 	text := buildPrompt(req)
@@ -161,7 +160,7 @@ func (p *plugin) chatCompletion(cred *credential, req *pb.ChatRequest, model str
 	payload, _ := json.Marshal(buildCompletionPayload(text, deepThink, cred.BotID))
 
 	u := upstreamURL + "/chat/completion?" + securityParams(cred).Encode()
-	httpReq, err := http.NewRequestWithContext(context.Background(), "POST", u, bytes.NewReader(payload))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", u, bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
@@ -190,41 +189,22 @@ func (p *plugin) chatCompletion(cred *credential, req *pb.ChatRequest, model str
 		return parseUpstreamError(string(body))
 	}
 
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 4<<20) // 长行上限 4MB
 	var eventName string
-	var dataLines []string
-	flush := func() error {
-		if len(dataLines) == 0 {
-			eventName = ""
-			return nil
-		}
-		data := []byte(strings.Join(dataLines, "\n"))
-		dataLines = nil
-		name := eventName
-		eventName = ""
-		if name == "" {
-			name = "message"
-		}
-		return onSSE(name, data)
-	}
-	for scanner.Scan() {
-		line := scanner.Text()
+	return sdk.ReadSSE(resp.Body, 4<<20, func(line string) error {
 		switch {
+		case line == "":
+			eventName = ""
 		case strings.HasPrefix(line, "event:"):
 			eventName = strings.TrimSpace(line[6:])
 		case strings.HasPrefix(line, "data:"):
-			dataLines = append(dataLines, strings.TrimSpace(line[5:]))
-		case line == "":
-			if err := flush(); err != nil {
-				return err
+			name := eventName
+			if name == "" {
+				name = "message"
 			}
+			return onSSE(name, []byte(strings.TrimPrefix(line[5:], " ")))
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("read stream failed: %w", err)
-	}
-	return flush()
+		return nil
+	})
 }
 
 // parseUpstreamError 上游 JSON 错误体 / SSE 文本中的 gateway-error → 业务错误。

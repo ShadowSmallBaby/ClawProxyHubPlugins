@@ -29,7 +29,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	}
 
 	s := &chunkState{bufferTools: len(req.GetTools()) > 0}
-	httpErr := p.chatCompletion(cred, req, model, func(name string, data []byte) error {
+	httpErr := p.chatCompletion(stream.Context(), cred, req, model, func(name string, data []byte) error {
 		done, err := p.onSSEChunk(s, model, name, data, stream.Send)
 		if err != nil {
 			return err
