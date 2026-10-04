@@ -2,10 +2,11 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk"
+	"io"
 	"strings"
 
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
@@ -67,6 +68,7 @@ func (p *plugin) streamOnce(ctx context.Context, cred *credential, model, conten
 
 	emitted := false
 	finish := "stop"
+	terminal := false
 
 	// emit 消费一个 SSE data 载荷，返回是否应结束流。
 	emit := func(data string) (bool, error) {
@@ -75,11 +77,16 @@ func (p *plugin) streamOnce(ctx context.Context, cred *credential, model, conten
 			return false, nil
 		}
 		if data == "[DONE]" {
+			terminal = true
 			return true, nil
 		}
 		var obj map[string]interface{}
 		if json.Unmarshal([]byte(data), &obj) != nil {
-			return false, nil
+			return false, fmt.Errorf("invalid upstream JSON")
+		}
+		if reason := finishReasonOf(obj); reason != "" {
+			terminal = true
+			finish = reason
 		}
 		if finishReasonOf(obj) == "length" {
 			finish = "length"
@@ -101,60 +108,37 @@ func (p *plugin) streamOnce(ctx context.Context, cred *credential, model, conten
 		}})
 	}
 
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 0, 64*1024), 8<<20) // 长行上限 8MB
-	var buf []string
-	var sendErr error
-
-	flush := func() (bool, error) {
-		if len(buf) == 0 {
-			return false, nil
-		}
-		data := strings.Join(buf, "\n")
-		buf = buf[:0]
-		return emit(data)
-	}
-
-loop:
-	for scanner.Scan() {
-		line := scanner.Text()
-		switch {
-		case line == "":
-			stop, e := flush()
-			if e != nil {
-				sendErr = e
-				break loop
+	sendErr := sdk.ReadSSE(resp.Body, 1<<20, func(line string) error {
+		if strings.HasPrefix(line, "data:") {
+			stop, err := emit(strings.TrimPrefix(line[5:], " "))
+			if err != nil {
+				return err
 			}
 			if stop {
-				break loop
+				return io.EOF
 			}
-		case strings.HasPrefix(line, "data:"):
-			buf = append(buf, strings.TrimSpace(line[5:]))
-		default:
-			// 裸 JSON 行（非 data: 帧）= Loomy 在健康连接上报错（Athena 900000 等）。
-			s := strings.TrimSpace(line)
-			if strings.HasPrefix(s, "{") && strings.Contains(s, `"code"`) {
-				if !emitted {
-					return false, loomyErrf(502, "Loomy 返回错误: %s", shared.Truncate(s, 300))
-				}
-				break loop // 已在转发正文：收尾即可
+		} else {
+			raw := strings.TrimSpace(line)
+			if strings.HasPrefix(raw, "{") && strings.Contains(raw, `"code"`) {
+				return loomyErrf(502, "Loomy 返回错误: %s", shared.Truncate(raw, 300))
 			}
 		}
-	}
-	if sendErr == nil {
-		if _, e := flush(); e != nil {
-			sendErr = e
-		}
-	}
+		return nil
+	})
 
 	if !emitted {
-		if err := scanner.Err(); err != nil {
+		if err := sendErr; err != nil {
 			return false, loomyErrf(502, "读取流失败: %v", err)
 		}
 		return false, nil // 空流：可重试
 	}
 	if sendErr != nil {
+		_ = stream.Send(shared.Failed(502, sendErr.Error()))
 		return true, nil // 下游已断，无需再发
+	}
+	if !terminal {
+		_ = stream.Send(shared.Failed(502, "upstream ended before a terminal event"))
+		return true, nil
 	}
 	_ = stream.Send(&pb.StreamEvent{Event: &pb.StreamEvent_MessageFinish{
 		MessageFinish: &pb.MessageFinish{FinishReason: finish, Usage: &pb.Usage{}},
