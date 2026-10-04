@@ -226,7 +226,7 @@ func (p *plugin) ensureFresh(ctx context.Context, c *credential) error {
 	if c.ExpireTime == 0 || time.Now().UnixMilli() < c.ExpireTime-int64(refreshMargin/time.Millisecond) {
 		return nil
 	}
-	return p.refreshCred(ctx, c)
+	return fmt.Errorf("credential refresh required")
 }
 
 // numberField 从响应取数字字段（宽松解析）。

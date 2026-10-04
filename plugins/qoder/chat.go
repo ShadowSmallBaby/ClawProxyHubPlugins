@@ -4,6 +4,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk"
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/openaiup"
 	"io"
 	"net/http"
 	"strings"
@@ -47,8 +49,8 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		raw := shared.ReadLimited(resp.Body, 8192)
-		code := int32(502)
-		if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		code := int32(resp.StatusCode)
+		if resp.StatusCode == 401 {
 			code = 401
 		}
 		return stream.Send(shared.Failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw), 300))))
@@ -64,78 +66,8 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 
 // scanOpenAISSE 标准 OpenAI SSE 流：data 行直接是 chat.completion.chunk（无信封）。
 func (p *plugin) scanOpenAISSE(body io.Reader, stream pb.ClawPlugin_ChatServer) error {
-	sawEvent := false
-	tmp := make([]byte, 64*1024)
-	var pending string
-	toolSeen := map[int]bool{}
-	finishReason := ""
-	var usage *pb.Usage
-
-	emit := func(ev *pb.StreamEvent) { _ = stream.Send(ev) }
-	finish := func() {
-		if finishReason == "" {
-			finishReason = "stop"
-		}
-		emit(&pb.StreamEvent{Event: &pb.StreamEvent_MessageFinish{
-			MessageFinish: &pb.MessageFinish{FinishReason: finishReason, Usage: usage},
-		}})
-	}
-
-	for {
-		n, err := body.Read(tmp)
-		if n > 0 {
-			pending += string(tmp[:n])
-			for {
-				i := strings.IndexByte(pending, '\n')
-				if i < 0 {
-					break
-				}
-				line := strings.TrimSuffix(pending[:i], "\r")
-				pending = pending[i+1:]
-				if !strings.HasPrefix(line, "data:") {
-					continue
-				}
-				payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-				if payload == "" || payload == "[DONE]" {
-					continue
-				}
-				content, reasoning, toolCalls, stop, u := parseOpenAIDelta(payload)
-				if u != nil {
-					usage = mergeUsage(usage, u)
-				}
-				if reasoning != "" {
-					emit(&pb.StreamEvent{Event: &pb.StreamEvent_ReasoningDelta{ReasoningDelta: &pb.ReasoningDelta{Text: reasoning}}})
-					sawEvent = true
-				}
-				if content != "" {
-					emit(&pb.StreamEvent{Event: &pb.StreamEvent_ContentDelta{ContentDelta: &pb.ContentDelta{Text: content}}})
-					sawEvent = true
-				}
-				for _, tc := range toolCalls {
-					ev := &pb.ToolCallDelta{Id: tc.id, Name: tc.name, ArgumentsDelta: tc.args}
-					if tc.id == "" && toolSeen[tc.index] {
-						ev.Id = ""
-					}
-					toolSeen[tc.index] = true
-					emit(&pb.StreamEvent{Event: &pb.StreamEvent_ToolCallDelta{ToolCallDelta: ev}})
-					sawEvent = true
-				}
-				if stop != "" {
-					finishReason = mapStop(stop)
-					sawEvent = true
-				}
-			}
-		}
-		if err != nil {
-			break
-		}
-	}
-	if !sawEvent {
-		parserFail(stream, 502, "upstream returned an empty stream")
-		return nil
-	}
-	finish()
-	return nil
+	parser := openaiup.NewParser(func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
+	return sdk.ScanSSE(body, parser)
 }
 
 // qToolCall 解析出的 tool_calls 增量。
