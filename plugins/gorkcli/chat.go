@@ -23,7 +23,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		return stream.Send(shared.Failed(401, err.Error()))
 	}
 	if c.expiringSoon() && c.RefreshToken != "" {
-		_ = p.doRefresh(ctx, c) // best-effort：核心随后经 Refresh 持久化新 token
+		return stream.Send(shared.Failed(401, "credential refresh required"))
 	}
 
 	body := responsesup.ChatBody(req)
