@@ -95,8 +95,8 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		// 不回传上游响应体（可能含提示词 / 账号元数据）
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<20))
-		code := int32(502)
-		if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		code := int32(resp.StatusCode)
+		if resp.StatusCode == 401 {
 			code = 401
 		}
 		return stream.Send(shared.Failed(code, fmt.Sprintf("upstream returned %s", resp.Status)))
@@ -115,6 +115,8 @@ func (p *plugin) scanSSE(body io.Reader, stream pb.ClawPlugin_ChatServer) error 
 	tmp := make([]byte, 64*1024)
 	var pending string
 	sawEvent := false
+	done := false
+	dataSize := 0
 	var dataLines []string
 	flush := func() error {
 		if len(dataLines) == 0 {
@@ -122,7 +124,9 @@ func (p *plugin) scanSSE(body io.Reader, stream pb.ClawPlugin_ChatServer) error 
 		}
 		data := strings.Join(dataLines, "\n")
 		dataLines = nil
+		dataSize = 0
 		if data == "[DONE]" {
+			done = true
 			return nil
 		}
 		var ev struct {
@@ -130,7 +134,13 @@ func (p *plugin) scanSSE(body io.Reader, stream pb.ClawPlugin_ChatServer) error 
 			Delta string `json:"delta"`
 		}
 		if json.Unmarshal([]byte(data), &ev) != nil {
-			return nil // 非 JSON 行（心跳 / 注释）静默跳过
+			return fmt.Errorf("invalid upstream SSE JSON")
+		}
+		if ev.Type == "finish" {
+			done = true
+		}
+		if ev.Type == "error" {
+			return fmt.Errorf("upstream error event")
 		}
 		if ev.Type == "text-delta" && ev.Delta != "" {
 			sawEvent = true
@@ -146,6 +156,9 @@ func (p *plugin) scanSSE(body io.Reader, stream pb.ClawPlugin_ChatServer) error 
 		n, err := body.Read(tmp)
 		if n > 0 {
 			pending += string(tmp[:n])
+			if len(pending) > 1<<20 {
+				return stream.Send(shared.Failed(502, "upstream frame exceeds 1 MiB"))
+			}
 			for {
 				i := strings.IndexByte(pending, '\n')
 				if i < 0 {
@@ -160,16 +173,29 @@ func (p *plugin) scanSSE(body io.Reader, stream pb.ClawPlugin_ChatServer) error 
 					continue
 				}
 				if strings.HasPrefix(line, "data:") {
+					dataSize += len(line)
+					if dataSize > 1<<20 {
+						return stream.Send(shared.Failed(502, "upstream event exceeds 1 MiB"))
+					}
 					dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
 				}
 			}
 		}
 		if err != nil {
+			if err != io.EOF {
+				return stream.Send(shared.Failed(502, "upstream read failed"))
+			}
+			if strings.HasPrefix(pending, "data:") {
+				dataLines = append(dataLines, strings.TrimSpace(strings.TrimPrefix(pending, "data:")))
+			}
 			if err := flush(); err != nil {
 				return err
 			}
 			break
 		}
+	}
+	if !done {
+		return stream.Send(shared.Failed(502, "upstream ended before a terminal event"))
 	}
 	if !sawEvent {
 		return stream.Send(shared.Failed(502, "upstream returned an empty stream"))
