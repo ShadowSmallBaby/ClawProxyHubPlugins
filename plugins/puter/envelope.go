@@ -3,6 +3,7 @@
 package main
 
 import (
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/requestutil"
 	"strings"
 
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
@@ -17,7 +18,7 @@ func normalizePuterReasoning(req *pb.ChatRequest, service string) (string, *bool
 	if service != "deepseek" {
 		return "", nil
 	}
-	switch e := strings.ToLower(strings.TrimSpace(req.GetExtra()["reasoning_effort"])); e {
+	switch e := strings.ToLower(strings.TrimSpace(requestutil.ReasoningEffort(req.GetExtra()))); e {
 	case "":
 		return "", nil
 	case "none":
