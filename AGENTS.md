@@ -61,7 +61,7 @@ plugins/plugins/<name>/     # Go 插件（编译二进制）
 plugins/plugins-lua/<name>/ # Lua 插件（脚本，零编译，见 §11）
 tools/pack/                 # 打包器：Go 交叉编译 / Lua 平台无关包，统一 .cphplugin + index.json
 index.json                  # 市场索引（CI 生成回写，勿手改；条目带 runtime）
-go.mod / go.work            # go.work 已忽略，本地开发覆盖用
+go.mod                     # SDK 固定到核心已发布的版本 tag
 ```
 
 ---
@@ -382,18 +382,16 @@ func (p *plugin) SetHost(host *sdk.Host) {
 
 ### 8.1 依赖 SDK
 
-SDK 来自核心模块 `github.com/ShadowSmallBaby/ClawProxyHub`（`go.mod` 固定到某提交）。对着本地核心源码开发用 workspace 覆盖（`go.work` 已忽略，不入库）：
+SDK 来自核心模块 `github.com/ShadowSmallBaby/ClawProxyHub`，`go.mod` 固定到已发布的版本 tag。正常构建直接使用远程依赖，不添加本地 `replace`、workspace 或 SDK 源码副本。
+
+升级顺序：先发布核心 tag，再更新插件 SDK 依赖（将 `vX.Y.Z` 换成实际发布的 tag）：
 
 ```bash
-go work init .
-go work edit -replace github.com/ShadowSmallBaby/ClawProxyHub=../ClawProxyHub
+go get github.com/ShadowSmallBaby/ClawProxyHub@vX.Y.Z
+go mod tidy
 ```
 
-升级 SDK 版本（绕过 workspace）：
-
-```bash
-GOWORK=off go get github.com/ShadowSmallBaby/ClawProxyHub@main && GOWORK=off go mod tidy
-```
+本地验证通过后，将已发布插件的 `manifest.json` 补丁版本加一，再推送插件仓库；未发布插件不纳入这次批量升级。
 
 ### 8.2 本地热部署
 

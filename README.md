@@ -76,19 +76,16 @@ Lua 插件跑在核心内置的 LuaHost 沙箱 VM 里：约定函数 `handshake/
 
 ## 开发
 
-SDK 来自核心模块 `github.com/ShadowSmallBaby/ClawProxyHub`（go.mod 固定到某个提交）。要对着本地核心源码开发，用 workspace 覆盖（`go.work` 已忽略，不入库）：
+SDK 来自核心模块 `github.com/ShadowSmallBaby/ClawProxyHub`，`go.mod` 固定到已发布的版本 tag，正常构建直接使用远程依赖，无需本地 `replace`、workspace 或 SDK 源码副本。
 
 ```bash
-go work init .
-go work edit -replace github.com/ShadowSmallBaby/ClawProxyHub=../ClawProxyHub
-
 go build ./... && go test ./...
 
 # 编译当前平台并装进核心的插件目录（核心运行中会锁住二进制，先在插件页停止该插件）
 go run ./tools/pack -install ../ClawProxyHub/data/plugins
 ```
 
-升级 SDK 版本：`GOWORK=off go get github.com/ShadowSmallBaby/ClawProxyHub@main && GOWORK=off go mod tidy`。
+升级 SDK 时，先发布核心 tag，再执行 `go get github.com/ShadowSmallBaby/ClawProxyHub@vX.Y.Z` 和 `go mod tidy`（将 `vX.Y.Z` 换成实际发布的 tag）。本地验证通过后，将已发布插件的 `manifest.json` 补丁版本加一，再推送插件仓库；未发布插件不纳入这次批量升级。
 
 ## 打包与发布
 
