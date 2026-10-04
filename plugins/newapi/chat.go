@@ -1,4 +1,4 @@
-// chat.go — 对话：messages 入口直通 /v1/messages（New API 原生支持），其余走 /v1/chat/completions。
+// chat.go — 按入口协议转发，Responses 可按实例切换为 Chat 兼容模式。
 package main
 
 import (
@@ -11,6 +11,7 @@ import (
 	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/anthropicup"
 	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/openaiup"
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/responsesup"
 	shared "github.com/ShadowSmallBaby/ClawProxyHubPlugins/shared"
 )
 
@@ -29,20 +30,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		return stream.Send(shared.Failed(500, err.Error()))
 	}
 
-	var (
-		path   string
-		body   map[string]interface{}
-		parser shared.SSEParser
-	)
-	if req.Source == "messages" {
-		path = "/v1/messages"
-		body = anthropicup.ChatBody(req)
-		parser = anthropicup.NewParser(func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
-	} else {
-		path = "/v1/chat/completions"
-		body = openaiup.ChatBody(req)
-		parser = openaiup.NewParser(func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
-	}
+	path, body, parser := upstreamChat(req, site.ResponsesMode, func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
 	body["model"] = req.Model
 	body["stream"] = true
 	raw, _ := json.Marshal(body)
@@ -70,4 +58,16 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		return err
 	}
 	return sdk.ScanSSE(resp.Body, parser)
+}
+
+// upstreamChat 同步选择路径、请求构造器和响应解析器，避免协议错配。
+func upstreamChat(req *pb.ChatRequest, responsesMode string, emit func(*pb.StreamEvent)) (string, map[string]interface{}, shared.SSEParser) {
+	switch {
+	case req.Source == "messages":
+		return "/v1/messages", anthropicup.ChatBody(req), anthropicup.NewParser(emit)
+	case req.Source == "responses" && responsesMode != "chat":
+		return "/v1/responses", responsesup.ChatBody(req), responsesup.NewParser(emit)
+	default:
+		return "/v1/chat/completions", openaiup.ChatBody(req), openaiup.NewParser(emit)
+	}
 }

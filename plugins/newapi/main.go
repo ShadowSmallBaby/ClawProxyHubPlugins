@@ -73,12 +73,13 @@ const (
 )
 
 type siteConfig struct {
-	BaseURL      string  `json:"base_url"`
-	InstanceName string  `json:"instance_name"`
-	QuotaPerUnit float64 `json:"quota_per_unit,string"`
-	BrowserUA    string  `json:"-"` // 管理面 / 会话 UA：核心全局浏览器 UA，空回退内置
-	CheckinMode  string  `json:"checkin_mode"`
-	CheckinURL   string  `json:"checkin_url"`
+	BaseURL       string  `json:"base_url"`
+	InstanceName  string  `json:"instance_name"`
+	QuotaPerUnit  float64 `json:"quota_per_unit,string"`
+	BrowserUA     string  `json:"-"` // 管理面 / 会话 UA：核心全局浏览器 UA，空回退内置
+	CheckinMode   string  `json:"checkin_mode"`
+	CheckinURL    string  `json:"checkin_url"`
+	ResponsesMode string  `json:"responses_mode"`
 }
 
 // site 读实例视图设置（30s 缓存）；base_url 缺失即报错，避免打到空地址。
@@ -102,12 +103,19 @@ func (p *plugin) site(instanceID int64) (*siteConfig, error) {
 				cfg.InstanceName = rawString(loose["instance_name"])
 				cfg.QuotaPerUnit = rawNumber(loose["quota_per_unit"])
 				cfg.CheckinMode = rawString(loose["checkin_mode"])
+				cfg.ResponsesMode = strings.TrimSpace(rawString(loose["responses_mode"]))
 				cfg.CheckinURL = strings.TrimSpace(rawString(loose["checkin_url"]))
 				cfg.BrowserUA = strings.TrimSpace(rawString(loose[sdk.SettingBrowserUserAgent]))
 			}
 		}
 	}
 	cfg.BaseURL = strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
+	if cfg.ResponsesMode == "" {
+		cfg.ResponsesMode = "native"
+	}
+	if cfg.ResponsesMode != "native" && cfg.ResponsesMode != "chat" {
+		return nil, fmt.Errorf("无效的 responses_mode：%q（应为 native 或 chat）", cfg.ResponsesMode)
+	}
 	if cfg.QuotaPerUnit <= 0 {
 		cfg.QuotaPerUnit = defaultQuotaPerUnit
 	}
@@ -229,6 +237,16 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 		InstanceSchema: `{
 			"type": "object",
 			"properties": {
+				"responses_mode": {
+					"type": "string",
+					"title": "Responses 转发模式",
+					"description": "默认使用 /v1/responses；站点不支持时可选择 Chat 兼容模式",
+					"default": "native",
+					"oneOf": [
+						{"const": "native", "title": "原生 Responses"},
+						{"const": "chat", "title": "Chat 兼容"}
+					]
+				},
 				"quota_per_unit": {
 					"type": "number",
 					"title": "额度换算",
