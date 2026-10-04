@@ -4,8 +4,12 @@
 package main
 
 import (
-	"bufio"
 	"context"
+	"crypto/sha256"
+	"fmt"
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk"
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/requestutil"
+	"io"
 	"strings"
 	"sync"
 
@@ -43,7 +47,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		ConversationID:      plan.convID,
 		WorkspaceID:         wsID,
 		Product:             site.Product,
-		ThinkingLevel:       thinkingLevel(modelKey, req.GetExtra()["reasoning_effort"]),
+		ThinkingLevel:       thinkingLevel(modelKey, requestutil.ReasoningEffort(req.GetExtra())),
 		ModelKey:            modelKey,
 		ChatType:            plan.chatType,
 		ToolCallID:          plan.toolCallID,
@@ -69,15 +73,19 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 		threadKey: plan.threadKey,
 		emit:      func(ev *pb.StreamEvent) { _ = stream.Send(ev) },
 	}
-	sc := bufio.NewScanner(resp.Body)
-	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-	for sc.Scan() {
-		st.handleLine(sc.Text())
-	}
-	if err := sc.Err(); err != nil {
+	if err := sdk.ReadSSE(resp.Body, 4<<20, func(line string) error {
+		st.handleLine(line)
+		if st.done {
+			return io.EOF
+		}
+		return nil
+	}); err != nil {
 		return stream.Send(shared.Failed(502, "read upstream stream: "+err.Error()))
 	}
 
+	if !st.done {
+		return stream.Send(shared.Failed(502, "upstream ended before terminal event"))
+	}
 	finish := "stop"
 	if st.sawTool {
 		finish = "tool_calls"
@@ -125,7 +133,7 @@ type turnPlan struct {
 func (p *plugin) planTurn(req *pb.ChatRequest) turnPlan {
 	msgs := req.GetMessages()
 	plan := turnPlan{
-		threadKey: threadKeyOf(msgs),
+		threadKey: scopedThreadKey(req),
 		chatType:  "USER_QUERY",
 		query:     lastUserText(msgs),
 	}
@@ -137,7 +145,7 @@ func (p *plugin) planTurn(req *pb.ChatRequest) turnPlan {
 			plan.convID = reg.convID
 			plan.toolCallID = out.callID
 			plan.toolResponse = out.content
-			p.deletePending(out.callID)
+			p.deletePending(out.callID, plan.threadKey)
 			return plan
 		}
 		// 未匹配（进程重启丢失登记 / 陈旧结果）：拼进 query 走 USER_QUERY，禁止复用旧会话。
@@ -150,7 +158,7 @@ func (p *plugin) planTurn(req *pb.ChatRequest) turnPlan {
 	}
 
 	// 新用户消息：线程已有会话则复用（多轮），否则新建 + 注入 system 上下文。
-	if conv, ok := p.lookupThread(plan.threadKey); ok {
+	if conv, ok := p.lookupThread(plan.threadKey); ok && len(msgs) > 2 {
 		plan.convID = conv
 		return plan
 	}
@@ -206,6 +214,12 @@ func (p *plugin) rememberThread(threadKey, convID string) {
 	if p.convByThread == nil {
 		p.convByThread = map[string]string{}
 	}
+	if len(p.convByThread) >= 4096 {
+		for k := range p.convByThread {
+			delete(p.convByThread, k)
+			break
+		}
+	}
 	p.convByThread[threadKey] = convID
 }
 
@@ -218,25 +232,44 @@ func (p *plugin) rememberPending(callID, threadKey, convID string) {
 	if p.pendingCall == nil {
 		p.pendingCall = map[string]pendingToolCall{}
 	}
-	p.pendingCall[callID] = pendingToolCall{threadKey: threadKey, convID: convID}
+	if len(p.pendingCall) >= 4096 {
+		for k := range p.pendingCall {
+			delete(p.pendingCall, k)
+			break
+		}
+	}
+	p.pendingCall[threadKey+"\x00"+callID] = pendingToolCall{threadKey: threadKey, convID: convID}
 }
 
 // lookupPending 取已登记调用；线程键不一致视为未匹配（避免跨会话续错）。
 func (p *plugin) lookupPending(callID, threadKey string) (pendingToolCall, bool) {
 	p.convMu.Lock()
 	defer p.convMu.Unlock()
-	reg, ok := p.pendingCall[callID]
+	reg, ok := p.pendingCall[threadKey+"\x00"+callID]
 	if !ok {
 		return pendingToolCall{}, false
 	}
-	if reg.threadKey != "" && threadKey != "" && reg.threadKey != threadKey {
+	if threadKey == "" || reg.threadKey != threadKey {
 		return pendingToolCall{}, false
 	}
 	return reg, true
 }
 
-func (p *plugin) deletePending(callID string) {
+func (p *plugin) deletePending(callID, threadKey string) {
 	p.convMu.Lock()
 	defer p.convMu.Unlock()
-	delete(p.pendingCall, callID)
+	delete(p.pendingCall, threadKey+"\x00"+callID)
+}
+
+// scopedThreadKey 账号、实例、调用方和系统提示共同隔离上游会话。
+func scopedThreadKey(req *pb.ChatRequest) string {
+	cred := req.GetCredential()
+	if cred == nil {
+		return ""
+	}
+	account := cred.AccountId
+	if account == "" {
+		account = fmt.Sprintf("%x", sha256.Sum256(cred.Blob))
+	}
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%d:%s:%s:%s:%s:%s", cred.InstanceId, account, req.Extra["cph.caller_id"], req.Extra["user"], systemContext(req.Messages), threadKeyOf(req.Messages)))))
 }

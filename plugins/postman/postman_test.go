@@ -76,7 +76,7 @@ func TestStreamToolCallChunks(t *testing.T) {
 	if d := events[0].GetToolCallDelta(); d == nil || d.GetId() != "call_1" || d.GetName() != "exec" {
 		t.Errorf("event0 not tool head: %+v", events[0])
 	}
-	if d := events[1].GetToolCallDelta(); d == nil || d.GetId() != "" || d.GetArgumentsDelta() != `{"co` {
+	if d := events[1].GetToolCallDelta(); d == nil || d.GetId() != "call_1" || d.GetArgumentsDelta() != `{"co` {
 		t.Errorf("event1 not args delta: %+v", events[1])
 	}
 	// pendingCall 登记到位（含正确会话）。

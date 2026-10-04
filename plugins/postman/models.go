@@ -100,8 +100,10 @@ func thinkingLevel(modelKey, effort string) string {
 	switch strings.ToLower(strings.TrimSpace(effort)) {
 	case "low", "minimal":
 		return "low"
-	case "high", "max":
+	case "high", "xhigh", "max":
 		return "high"
+	case "none":
+		return ""
 	default:
 		return "medium"
 	}

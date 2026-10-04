@@ -88,6 +88,7 @@ type postmanEvent struct {
 
 // streamState 一次 Chat 的流解析状态：捕获会话 id、累积工具调用、把事件翻成 StreamEvent。
 type streamState struct {
+	done      bool
 	p         *plugin
 	threadKey string
 	convID    string
@@ -105,7 +106,11 @@ func (s *streamState) handleLine(line string) {
 		return
 	}
 	payload := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
-	if payload == "" || payload == "[DONE]" {
+	if payload == "[DONE]" {
+		s.done = true
+		return
+	}
+	if payload == "" {
 		return
 	}
 	var ev postmanEvent
@@ -163,7 +168,7 @@ func (s *streamState) handleToolCalls(ev postmanEvent) {
 		}
 		if tc.Function.Arguments != "" {
 			s.emit(&pb.StreamEvent{Event: &pb.StreamEvent_ToolCallDelta{
-				ToolCallDelta: &pb.ToolCallDelta{ArgumentsDelta: tc.Function.Arguments},
+				ToolCallDelta: &pb.ToolCallDelta{Id: tc.ID, ArgumentsDelta: tc.Function.Arguments},
 			}})
 		}
 	}
