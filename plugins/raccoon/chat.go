@@ -29,8 +29,8 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		raw2 := shared.ReadLimitedResp(resp, 8192)
-		code := int32(502)
-		if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		code := int32(resp.StatusCode)
+		if resp.StatusCode == 401 {
 			code = 401
 		}
 		return stream.Send(shared.Failed(code, fmt.Sprintf("HTTP %d: %s", resp.StatusCode, shared.Truncate(string(raw2), 300))))
