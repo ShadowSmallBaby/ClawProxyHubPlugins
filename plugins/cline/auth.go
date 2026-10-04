@@ -199,7 +199,7 @@ func (p *plugin) ensureToken(ctx context.Context, c *credential) error {
 	if c.AccessToken != "" && (c.ExpiresAt == 0 || time.Now().UnixMilli() < c.ExpiresAt-60000) {
 		return nil
 	}
-	return p.refreshCred(ctx, c)
+	return fmt.Errorf("credential refresh required")
 }
 
 func loginDone(c *credential) *pb.LoginResult {

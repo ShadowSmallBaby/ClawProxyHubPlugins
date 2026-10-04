@@ -34,7 +34,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
-		code := int32(502)
+		code := int32(resp.StatusCode)
 		switch {
 		case resp.StatusCode == 401:
 			code = 401
