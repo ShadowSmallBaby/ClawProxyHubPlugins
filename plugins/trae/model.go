@@ -33,7 +33,6 @@ var fallbackModels = []struct{ id, name string }{
 // modelChannel 模型 → 提供它的聊天通道（Chat 时据此路由；⚠️ 模型只在列出
 // 它的通道里可调用，跨通道发 4001）。
 
-
 func (p *plugin) ListModels(ctx context.Context, credBlob *pb.CredentialBlob) (*pb.ModelList, error) {
 	cred, err := credFrom(credBlob)
 	if err != nil {

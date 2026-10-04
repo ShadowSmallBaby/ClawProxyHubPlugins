@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"google.golang.org/protobuf/proto"
 	"net/http"
 	"strings"
 	"time"
@@ -130,7 +131,7 @@ func (p *plugin) GetProfile(ctx context.Context, credBlob *pb.CredentialBlob) (*
 		if data["checked_in"] == true {
 			prof.Quota["checked_in"] = "true"
 		}
-	}	// 积分余额：remain = ∑(credits_limit - credits_amount)
+	} // 积分余额：remain = ∑(credits_limit - credits_amount)
 	if packs := p.fetchCredits(ctx, c); len(packs) > 0 {
 		if b, err := json.Marshal(packs); err == nil {
 			prof.CreditsJson = string(b)
@@ -237,11 +238,17 @@ func (p *plugin) Refresh(ctx context.Context, credBlob *pb.CredentialBlob) (*pb.
 		c.ExpiresAt = fmt.Sprintf("%d", time.Now().UnixMilli()+int64(d*1000))
 	}
 	blob, _ := json.Marshal(c)
-	prof, _ := p.GetProfile(ctx, &pb.CredentialBlob{Blob: blob})
+	prof, _ := p.GetProfile(ctx, updatedCredential(credBlob, blob))
 	return &pb.RefreshResult{Blob: blob, Profile: prof}, nil
 }
 
 // httpNewReq 构造带 JSON body 的请求。
 func httpNewReq(ctx context.Context, method, url string, body []byte) (*http.Request, error) {
 	return http.NewRequestWithContext(ctx, method, url, bytes.NewReader(body))
+}
+
+func updatedCredential(original *pb.CredentialBlob, blob []byte) *pb.CredentialBlob {
+	c := proto.Clone(original).(*pb.CredentialBlob)
+	c.Blob = blob
+	return c
 }
