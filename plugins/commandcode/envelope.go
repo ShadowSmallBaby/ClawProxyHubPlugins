@@ -3,6 +3,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk/requestutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -218,7 +219,7 @@ func ccUserContent(m *pb.EnvelopeMessage) []map[string]interface{} {
 
 // reasoningEffort 显式 reasoning_effort 优先，否则 Anthropic thinking budget → effort。
 func reasoningEffort(req *pb.ChatRequest) string {
-	if v := req.Extra["reasoning_effort"]; v != "" {
+	if v := requestutil.ReasoningEffort(req.Extra); v != "" {
 		return v
 	}
 	raw := req.Extra["thinking"]

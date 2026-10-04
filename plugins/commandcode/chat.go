@@ -104,6 +104,12 @@ func scanNDJSON(ctx context.Context, body io.Reader, parser interface {
 }, idle time.Duration) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	closer, ok := body.(io.Closer)
+	if !ok {
+		return fmt.Errorf("stream reader must support cancellation")
+	}
+	stopClose := context.AfterFunc(ctx, func() { _ = closer.Close() })
+	defer stopClose()
 	timer := time.AfterFunc(idle, cancel)
 	defer timer.Stop()
 
@@ -124,6 +130,10 @@ func scanNDJSON(ctx context.Context, body io.Reader, parser interface {
 				scanned = scanned[i+1:]
 				parser.Feed(line)
 			}
+			if len(scanned) > 1<<20 {
+				parser.FinishWithError(502, "upstream frame exceeds 1 MiB")
+				return nil
+			}
 			pending = scanned
 		}
 		if err != nil {
@@ -131,7 +141,7 @@ func scanNDJSON(ctx context.Context, body io.Reader, parser interface {
 				parser.Feed(pending)
 			}
 			if ctx.Err() != nil {
-				parser.FinishWithError(429, "upstream idle timeout: no data for "+idle.String())
+				parser.FinishWithError(504, "upstream idle timeout: no data for "+idle.String())
 				return nil
 			}
 			if err != io.EOF {
