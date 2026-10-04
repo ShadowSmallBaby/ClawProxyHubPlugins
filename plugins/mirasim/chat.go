@@ -62,12 +62,12 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 
 	resp, err := rc.relayDo(ctx, path, body, extra)
 	if err != nil {
-		return stream.Send(shared.Failed(502, err.Error()))
+		return stream.Send(shared.Failed(shared.ErrorStatus(err), err.Error()))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		errBody := shared.ReadLimited(resp.Body, 8192)
-		code := int32(502)
+		code := int32(resp.StatusCode)
 		switch resp.StatusCode {
 		case 401, 403:
 			code = 401

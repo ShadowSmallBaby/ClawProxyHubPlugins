@@ -168,7 +168,7 @@ func (rc *relayClient) ensureAccess(ctx context.Context) error {
 	if c.AccessToken != "" && (c.ExpiresAt == 0 || time.Now().UnixMilli() < c.ExpiresAt-int64(accessStaleLead/time.Millisecond)) {
 		return nil
 	}
-	return rc.refreshAccess(ctx)
+	return shared.HTTPError{Code: 401, Message: "credential refresh required"}
 }
 
 // refreshAccess POST {admin}/auth/refresh，用私有 client（body 含长期 refresh token，不入日志）。
