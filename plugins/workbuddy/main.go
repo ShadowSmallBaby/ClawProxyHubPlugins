@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -338,7 +337,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
-		code := int32(502)
+		code := int32(resp.StatusCode)
 		if resp.StatusCode == 401 {
 			code = 401
 		}
@@ -352,25 +351,7 @@ func (p *plugin) Chat(req *pb.ChatRequest, stream pb.ClawPlugin_ChatServer) erro
 	}
 
 	parser := openaiup.NewParser(func(ev *pb.StreamEvent) { _ = stream.Send(ev) })
-	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-	sawEvent := false
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "data:") && !strings.Contains(line, "[DONE]") {
-			sawEvent = true
-		}
-		parser.Feed(line)
-	}
-	if err := scanner.Err(); err != nil {
-		parser.FinishWithError(502, "upstream stream broken: "+err.Error())
-		return nil
-	}
-	if !sawEvent {
-		parser.FinishWithError(502, "upstream returned an empty stream")
-		return nil
-	}
-	parser.Finish()
+	_ = sdk.ScanSSEWithLimit(resp.Body, parser, 4<<20)
 	return nil
 }
 
