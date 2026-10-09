@@ -1,6 +1,6 @@
 # AGENTS.md — ClawProxyHub 插件开发指南
 
-面向人与 AI 编程助手的插件编写规范。本仓库是 [ClawProxyHub](https://github.com/ShadowSmallBaby/ClawProxyHub) 的官方插件库。读完本文即可从零写出一个可被核心加载、可上架市场的插件：**Go 插件**（`plugins/plugins/`，编译二进制，§1–10）或 **Lua 插件**（`plugins/plugins-lua/`，零编译脚本，§11）。
+面向人与 AI 编程助手的插件编写规范。本仓库是 [ClawProxyHub](https://github.com/ShadowSmallBaby/ClawProxyHub) 的官方插件库。读完本文即可从零写出一个可被核心加载、可上架市场的插件：**Go 插件**（`plugins-go/`，编译二进制，§1–10）或 **Lua 插件**（`plugins-lua/`，零编译脚本，§11）。
 
 > 契约真身是核心仓库的 `sdk/proto/cph.proto`（protocol v2）。本文是它的读法与落地范式，两者冲突时以 proto 为准。
 
@@ -8,7 +8,7 @@
 
 ## 1. 心智模型
 
-- **进程模型**：每个插件是一个独立可执行文件，核心用 [hashicorp/go-plugin](https://github.com/hashicorp/go-plugin) 以 gRPC 子进程方式拉起。核心是 gRPC 客户端调用插件（`ClawPlugin` 服务），插件反向调用核心（`ClawHost` 服务）。**Lua 插件**（§11）例外：脚本身，由核心内置 LuaHost 子进程解释执行，对核心 manager 仍呈现同一 gRPC 契约。
+- **进程模型**：每个插件是一个独立可执行文件，核心用 [hashicorp/go-plugin](https://github.com/hashicorp/go-plugin) 以 gRPC 子进程方式拉起。核心是 gRPC 客户端调用插件（`ClawPlugin` 服务），插件反向调用核心（`ClawHost` 服务）。**Lua 插件**（§11）例外：脚本身，由宿主提供的 Lua Host 解释执行，对核心 manager 仍呈现同一 gRPC 契约。
 - **唯一耦合点**：`cph.proto`。核心不认识任何具体插件，插件只实现契约。握手时双方校验 `protocol_version`，不一致直接拒载。
 - **凭据代管**：账号凭据是插件自定义格式的 opaque `blob`，核心只存不解析。插件通过 RPC 返回值把变更后的 blob 交回核心持久化。
 - **实例维度（v2）**：一个插件可挂多个「实例」（= 一个站点 / 部署）。核心固定提供 `name + base_url`，插件用 `instance_schema` 声明站点特有字段。登录 / 刷新 / 设置 / 任务回调都按 `instance_id` 区分。未声明 `instances` 能力的插件只有一个默认实例。
@@ -26,14 +26,16 @@
 ### 2.1 包目录（硬约定）
 
 ```
-plugins/<name>/
+plugins-go/<name>/
 ├── manifest.json   # 必需：name(=目录名)/version/author/label/icon/protocol_version
 ├── icon.png        # 可选：正方形 PNG 128–256px
-└── *.go            # package main，入口 sdk.Serve(&plugin{})
+├── *.go            # 可导入业务包，New(version) 返回插件实现
+└── cmd/main.go     # 桌面 package main，sdk.Serve(<name>.New(version))
 ```
 
 - `name` 必须等于目录名，全局唯一。
-- 所有 `.go` 同属 `package main`，如何拆文件是插件内部自由。
+- 所有现有 Go 插件均使用可导入业务包，业务文件保留在根目录，工厂提供 `New(version) sdk.Plugin`；桌面 `package main` 入口位于 `cmd/main.go`，版本通过 `-X main.version=...` 注入。
+- 打包器优先构建 `cmd/`，不存在时兼容旧式根目录 `package main`。新插件按下文的业务工厂与桌面入口组织，参考 `newapi`。
 
 ### 2.2 推荐文件分层（按职责拆，不是按文件数强求）
 
@@ -41,7 +43,8 @@ plugins/<name>/
 
 | 文件 | 职责 | RPC / 关注点 |
 | --- | --- | --- |
-| `main.go` | 入口 + 骨架：`sdk.Serve`、`plugin` struct、`SetHost`、`Handshake`(manifest)、HTTP client、凭据 blob 解析、站点/设置读取 | 进程生命周期、Manifest |
+| `plugin.go` | 业务工厂 `New(version)`、`plugin` struct、`SetHost`、`Handshake`(manifest)、HTTP client、凭据 blob 解析、站点/设置读取 | 实例生命周期、Manifest |
+| `cmd/main.go` | 桌面入口：版本注入、调用业务工厂与 `sdk.Serve` | 桌面进程启动 |
 | `auth.go` | 登录多步流程、会话自举、token 交换 | `Login` |
 | `account.go` | 登录校验、资料与余额、刷新 | `Refresh` / `Get Profile`（也可与 auth 合并） |
 | `chat.go` | 统一信封 → 上游请求体 → 事件流 | `Chat` |
@@ -57,9 +60,10 @@ plugins/<name>/
 ### 2.3 仓库级布局
 
 ```
-plugins/plugins/<name>/     # Go 插件（编译二进制）
-plugins/plugins-lua/<name>/ # Lua 插件（脚本，零编译，见 §11）
+plugins-go/<name>/     # Go 插件（编译二进制）
+plugins-lua/<name>/ # Lua 插件（脚本，零编译，见 §11）
 tools/pack/                 # 打包器：Go 交叉编译 / Lua 平台无关包，统一 .cphplugin + index.json
+android/                    # 独立 Android 原生插件构建、签名与包校验，不加载主 APP 工程
 index.json                  # 市场索引（CI 生成回写，勿手改；条目带 runtime）
 go.mod                     # SDK 固定到核心已发布的版本 tag
 ```
@@ -125,10 +129,10 @@ go.mod                     # SDK 固定到核心已发布的版本 tag
 
 ## 5. 能力实现指南
 
-### 5.0 最小骨架（main.go）
+### 5.0 最小骨架（plugin.go 与 cmd/main.go）
 
 ```go
-package main
+package myplugin
 
 import (
 	"context"
@@ -140,17 +144,39 @@ import (
 
 const pluginName = "myplugin"
 
-// 打包时经 -ldflags "-X main.version=..." 注入；源码直跑为 dev。
-var version = "dev"
-
-func main() { sdk.Serve(&plugin{}) }
+// 每个实例保留自己的版本，供桌面和 Android 入口共用。
+func New(version string) sdk.Plugin {
+	if version == "" {
+		version = "dev"
+	}
+	return &plugin{version: version}
+}
 
 type plugin struct {
 	pb.UnimplementedClawPluginServer // 未实现的 RPC 自动兜底
 	host *sdk.Host
+	version string
 }
 
 func (p *plugin) SetHost(host *sdk.Host) { p.host = host }
+```
+
+桌面入口 `cmd/main.go`：
+
+```go
+//go:build !android
+
+package main
+
+import (
+	"github.com/ShadowSmallBaby/ClawProxyHub/sdk"
+	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/myplugin"
+)
+
+// 打包时经 -ldflags "-X main.version=..." 注入。
+var version = "dev"
+
+func main() { sdk.Serve(myplugin.New(version)) }
 ```
 
 ### 5.1 Handshake（Manifest 声明）
@@ -166,7 +192,7 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 	}
 	return &pb.HandshakeResponse{Manifest: &pb.Manifest{
 		Name:            pluginName,
-		Version:         version,
+		Version:         p.version,
 		Author:          "you",
 		Label:           map[string]string{"zh": "我的插件", "en": "My Plugin"},
 		ProtocolVersion: sdk.ProtocolVersion,
@@ -391,7 +417,7 @@ go get github.com/ShadowSmallBaby/ClawProxyHub@vX.Y.Z
 go mod tidy
 ```
 
-本地验证通过后，将已发布插件的 `manifest.json` 补丁版本加一，再推送插件仓库；未发布插件不纳入这次批量升级。
+验证 SDK 升级后，将已发布插件的 `manifest.json` 补丁版本加一；未发布插件无需单独递增版本。
 
 ### 8.2 本地热部署
 
@@ -400,12 +426,12 @@ go mod tidy
 go run ./tools/pack -install ../ClawProxyHub/data/plugins
 ```
 
-核心运行中通常可覆盖（旧文件被改名为 `.exe~`）；核心侧改动走 GoLand 运行配置，需 IDE 重启。验证优先直读 DB（`request_logs` 等）而非只看界面。
+Lua 开发安装直接复制脚本、清单和图标，由宿主已安装的 Lua Host 运行，无需为脚本编译运行时或检出主库。Go 插件安装编译当前平台入口；替换运行中的二进制前先停止插件。请求行为通过 `request_logs` 验证。
 
 ### 8.3 打包
 
 ```bash
-go run ./tools/pack                 # dist/<name>-<version>.cphplugin + dist/index.json
+go run ./tools/pack                 # build/<name>-<version>.cphplugin + build/index.json
 go run ./tools/pack -only workbuddy # 只打某个
 go run ./tools/pack -skip lobsterai # 跳过已发布版本，索引沿用现有 index.json
 ```
@@ -413,6 +439,8 @@ go run ./tools/pack -skip lobsterai # 跳过已发布版本，索引沿用现有
 - 包格式：`.cphplugin`，含 `manifest.json` + 图标 + `plugin-<os>-<arch>[.exe]`（windows/amd64、linux/amd64、linux/arm64、darwin/amd64、darwin/arm64）。
 - 固定时间戳，同一输入产出同一 sha256（可复现）。
 - **`index.json` 陷阱**：`-skip` 沿用现有索引条目，别 reset 破坏基线，否则已发布插件条目会永久丢失、CI 补不回；sha 须匹配现存 release。
+
+Android 原生包由本库 `android/` 独立构建，使用 `go.mod` 锁定且包含 `sdk/androidplugin` 的核心 SDK；入口模板调用同一个 `New(version)`。从插件仓库根目录执行 `sh android/gradlew -p android -PcphPlugins=<name> packageCphPlugin`（Windows 用 `gradlew.bat`），再用 `python3 android/verify_packages.py build/android/plugin-packages` 校验。签名环境变量与主 APP 同名，但由本库直接读取；详见 [android/README.md](android/README.md)。
 
 ### 8.4 发布（CI 驱动）
 
@@ -435,9 +463,9 @@ go vet ./... && go test ./... && go run ./tools/pack -only <你的插件>
 
 **Go 插件：**
 
-- [ ] `plugins/plugins/<name>/`，`name` = 目录名 = `manifest.json` 的 `name`，全局唯一。
+- [ ] `plugins-go/<name>/`，`name` = 目录名 = `manifest.json` 的 `name`，全局唯一。
 - [ ] `manifest.json` 五字段齐全，`version` 语义化，`protocol_version: 2`。
-- [ ] `main.go`：`sdk.Serve(&plugin{})`、`var version`、`SetHost`、`Handshake` 校验协议版本。
+- [ ] `plugin.go`：`New(version)`、实例版本、`SetHost`、`Handshake` 校验协议版本；`cmd/main.go`：`main.version` 注入与 `sdk.Serve`。
 - [ ] `Handshake` 声明的 `capabilities` 与实际实现的 RPC 一致；未实现的 RPC 用 `UnimplementedClawPluginServer` 兜底。
 - [ ] 声明 `chat`：Chat 流式实现，优先复用 `openaiup`/`anthropicup`/`responsesup`，Usage 走 Anthropic 语义。
 - [ ] 声明 `login`：blob 格式自定，核心注入字段用 `json:"-"`；多步用 `next.state`。
@@ -449,7 +477,7 @@ go vet ./... && go test ./... && go run ./tools/pack -only <你的插件>
 
 **Lua 插件：**
 
-- [ ] `plugins/plugins-lua/<name>/`，只需 `manifest.json`（name/version/author/label/icon）+ `main.lua`。
+- [ ] `plugins-lua/<name>/`，只需 `manifest.json`（name/version/author/label/icon）+ `main.lua`。
 - [ ] `main.lua` 末尾 `return M`，约定函数挂为字段：`handshake` / `chat(req, stream)` / `models` / `login` / `refresh` / `profile`。
 - [ ] `handshake` 校验 `req.protocol_version` 并声明 capabilities/auth_methods（与 Go 插件同构）。
 - [ ] 一切出站只经 `cph.*`（http/json/hash/time/random/log/openai），不绕沙箱。
@@ -470,7 +498,7 @@ go vet ./... && go test ./... && go run ./tools/pack -only <你的插件>
 
 ## 11. Lua 插件（零编译运行时）
 
-不想写 Go？核心内置 **LuaHost** 运行时（源码 `hosts/luahost`，独立 module），沙箱化 gopher-lua VM。Lua 插件是**脚本目录**，无编译、交叉打包零痛，社区作者只需一个 `main.lua`。
+不想写 Go？宿主提供 **Lua Host** 运行时（源码 `hosts/luahost`，独立 module），沙箱化 gopher-lua VM。Lua 插件是**脚本目录**，无编译、交叉打包零痛，社区作者只需一个 `main.lua`。
 
 ### 11.1 目录与分发
 
@@ -481,8 +509,8 @@ plugins-lua/<name>/
 └── main.lua        # 约定函数 return M（可再 require("lib.*") 拆模块）
 ```
 
-- **分发**：`tools/pack` 双目录扫描（`plugins/` + `plugins-lua/`），Lua 插件跳过 go build、产平台无关 `.cphplugin`；市场 index.json 条目带 `runtime: "lua"`。
-- **加载**：核心按 `manifest.runtime=="lua"` 分流，启动共享 LuaHost 子进程（一份服务所有 lua 插件，每插件一个进程＝隔离不丢），manager 全程零改动（照标准 go-plugin 处理）；核心升级带来的新内置 LuaHost 开机自动刷新。
+- **分发**：`tools/pack` 双目录扫描（`plugins-go/` + `plugins-lua/`），Lua 插件跳过 go build、产平台无关 `.cphplugin`；市场 index.json 条目带 `runtime: "lua"`。
+- **加载**：核心按 `manifest.runtime=="lua"` 分流，使用已安装并启用的 Lua Host；桌面按插件启动独立进程，Android 使用私有 Lua 服务。运行时以 `.cphhost` 独立安装和升级，业务脚本包不携带运行时。
 - 样板：`plugins-lua/autoclaw`。
 
 ### 11.2 约定函数（`main.lua` 末尾 `return M`，函数挂为字段）
