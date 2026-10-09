@@ -1,6 +1,7 @@
 # 构建产物
-dist/
+/build/
 *.exe
+__pycache__/
 
 # 本地多模块开发（go work init . ../ClawProxyHub）
 go.work

@@ -1,0 +1,33 @@
+plugins { id 'base' }
+
+// 原生入口、编译中间文件与签名包统一写入插件仓库根目录。
+layout.buildDirectory.set(rootProject.file('../build/android'))
+subprojects {
+    layout.buildDirectory.set(layout.projectDirectory)
+}
+
+apply from: 'signing.gradle'
+
+// Android SDK 与桌面插件使用同一份锁定依赖，不读取主 APP 工程。
+tasks.register('checkAndroidSdk') {
+    doLast {
+        def result = providers.exec {
+            workingDir rootProject.file('..')
+            environment 'GOWORK', 'off'
+            environment 'GOOS', 'android'
+            environment 'GOARCH', providers.gradleProperty('cphABI').getOrElse('arm64-v8a') == 'x86_64' ? 'amd64' : 'arm64'
+            environment 'CGO_ENABLED', '1'
+            commandLine 'go', 'list', '-mod=readonly', 'github.com/ShadowSmallBaby/ClawProxyHub/sdk/androidplugin'
+            ignoreExitValue = true
+        }
+        if (result.result.get().exitValue != 0) {
+            throw new GradleException('The pinned core SDK must provide sdk/androidplugin. Upgrade go.mod to a published core version containing the Android SDK.\n' + result.standardError.asText.get())
+        }
+    }
+}
+
+tasks.register('packageCphPlugin') {
+    group = 'build'
+    description = 'Build and sign the selected Android native plugins.'
+    dependsOn subprojects.collect { "${it.path}:packageCphPlugin" }
+}
