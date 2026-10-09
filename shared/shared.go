@@ -1,5 +1,4 @@
 // Package shared 提供各插件通用且行为一致的纯工具函数，供插件直接 import。
-// 传输/SSE/代理相关已迁至 sdk（统一请求+日志层）；此处保留历史兼容薄封装。
 package shared
 
 import (
@@ -45,25 +44,10 @@ func Truncate(s string, n int) string {
 	return s[:n]
 }
 
-// ProxyURL 把 ProxyConfig 渲染成 http 代理 URL，未配置时返回空串。
-//
-// Deprecated: 用 sdk.ProxyURL。
-func ProxyURL(p *pb.ProxyConfig) string { return sdk.ProxyURL(p) }
-
-// UpstreamClient 构造访问上游的 HTTP 客户端，proxyURL 非空时走该代理。
-//
-// Deprecated: 用 sdk.UpstreamClient（或 StreamSSE/HTTPRequest.Proxy 让 sdk 自建）。
-func UpstreamClient(proxyURL string) *http.Client { return sdk.UpstreamClient(proxyURL) }
-
 // SSEParser 消费上游 SSE 行流的解析器契约。
 //
 // Deprecated: 契约已迁至 sdk.SSEParser（本别名保持既有实现零改动）。
 type SSEParser = sdk.SSEParser
-
-// ScanSSE 逐行扫描上游 SSE：无 data 事件视为空流(502)，断流(502)，正常结束 Finish。
-//
-// Deprecated: 用 host.StreamSSE（带统一日志）或 sdk.ScanSSE（仅扫描）。
-func ScanSSE(body io.Reader, parser SSEParser) error { return sdk.ScanSSE(body, parser) }
 
 // Failed 构造 TaskFailed 事件。
 func Failed(code int32, msg string) *pb.StreamEvent {
