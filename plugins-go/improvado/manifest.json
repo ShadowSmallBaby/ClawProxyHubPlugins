@@ -1,10 +1,10 @@
 {
-  "name": "autoclaw",
+  "name": "improvado",
   "version": "0.1.3",
   "author": "cph",
   "label": {
-    "zh": "AutoClaw",
-    "en": "AutoClaw"
+    "zh": "Improvado",
+    "en": "Improvado"
   },
   "icon": "icon.png",
   "protocol_version": 2

@@ -1,10 +1,10 @@
 {
-  "name": "autoclaw",
-  "version": "0.1.3",
+  "name": "raccoon",
+  "version": "0.1.2",
   "author": "cph",
   "label": {
-    "zh": "AutoClaw",
-    "en": "AutoClaw"
+    "zh": "Raccoon",
+    "en": "Raccoon"
   },
   "icon": "icon.png",
   "protocol_version": 2

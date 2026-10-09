@@ -1,0 +1,11 @@
+{
+  "name": "workbuddy",
+  "version": "0.1.9",
+  "author": "cph",
+  "label": {
+    "zh": "WorkBuddy",
+    "en": "WorkBuddy"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
