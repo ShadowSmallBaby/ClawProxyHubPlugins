@@ -7,6 +7,10 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      run_checks:
+        description: "运行 Go 静态检查、单元测试及发布脚本测试"
+        type: boolean
+        default: false
       publish:
         description: "发布 Release 并更新市场索引（仅 main）"
         type: boolean
@@ -40,6 +44,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Vet & test
+        if: github.event_name == 'pull_request' || inputs.run_checks == true
         run: |
           go vet ./...
           go test ./...
@@ -88,6 +93,8 @@ jobs:
       - name: Check pinned Android SDK
         run: sh android/gradlew -p android checkAndroidSdk
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Install Android toolchain
         run: sdkmanager 'ndk;28.2.13676358'
       - name: Prepare official signing identity
