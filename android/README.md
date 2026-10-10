@@ -8,12 +8,14 @@
 - Android NDK `28.2.13676358`，通过 `ANDROID_HOME` 或 `ANDROID_SDK_ROOT` 定位；无需安装 Android platform 或 build-tools。
 - SDK 必须包含 `sdk/androidplugin`，正常构建关闭 Go workspace 并只读使用锁定依赖。
 
-升级 SDK 时，先发布包含 `sdk/androidplugin` 的核心版本，再在插件仓库执行以下命令，将 `vX.Y.Z` 替换为实际发布的 tag，并提交更新后的 `go.mod` / `go.sum`：
+升级 SDK 时，先推送包含 `sdk/androidplugin` 的核心提交或发布 tag，再执行以下命令，将 `<tag-or-commit>` 替换为实际远程引用，并提交更新后的 `go.mod` / `go.sum`：
 
 ```sh
-go get github.com/ShadowSmallBaby/ClawProxyHub@vX.Y.Z
+go get "github.com/ShadowSmallBaby/ClawProxyHub@<tag-or-commit>"
 go mod tidy
 ```
+
+核心应用 v2.0.0 的 Go module 路径仍不含 `/v2`，依赖该提交时使用 Go 自动解析的 pseudo-version；不要直接填写 `v2.0.0` 或修改 SDK import 路径。
 
 SDK 升级时按 [AGENTS.md](../AGENTS.md) 同步已发布插件版本。`checkAndroidSdk` 在编译前检查锁定依赖是否包含所需接口。
 

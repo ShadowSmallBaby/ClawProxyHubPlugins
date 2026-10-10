@@ -65,7 +65,7 @@ plugins-lua/<name>/ # Lua 插件（脚本，零编译，见 §11）
 tools/pack/                 # 打包器：Go 交叉编译 / Lua 平台无关包，统一 .cphplugin + index.json
 android/                    # 独立 Android 原生插件构建、签名与包校验，不加载主 APP 工程
 index.json                  # 市场索引（CI 生成回写，勿手改；条目带 runtime）
-go.mod                     # SDK 固定到核心已发布的版本 tag
+go.mod                     # SDK 固定到核心已推送的 tag 或提交
 ```
 
 ---
@@ -408,14 +408,16 @@ func (p *plugin) SetHost(host *sdk.Host) {
 
 ### 8.1 依赖 SDK
 
-SDK 来自核心模块 `github.com/ShadowSmallBaby/ClawProxyHub`，`go.mod` 固定到已发布的版本 tag。正常构建直接使用远程依赖，不添加本地 `replace`、workspace 或 SDK 源码副本。
+SDK 来自核心模块 `github.com/ShadowSmallBaby/ClawProxyHub`，`go.mod` 固定到已推送的 tag 或提交。正常构建直接使用远程依赖，不添加本地 `replace`、workspace 或 SDK 源码副本。
 
-升级顺序：先发布核心 tag，再更新插件 SDK 依赖（将 `vX.Y.Z` 换成实际发布的 tag）：
+升级顺序：先推送核心提交或发布 tag，再更新插件 SDK 依赖（将 `<tag-or-commit>` 换成实际远程引用）：
 
 ```bash
-go get github.com/ShadowSmallBaby/ClawProxyHub@vX.Y.Z
+go get "github.com/ShadowSmallBaby/ClawProxyHub@<tag-or-commit>"
 go mod tidy
 ```
+
+核心应用 v2.0.0 的 Go module 路径仍不含 `/v2`，依赖该提交时使用 Go 自动解析的 pseudo-version；不要直接填写 `v2.0.0` 或修改 SDK import 路径。
 
 验证 SDK 升级后，将已发布插件的 `manifest.json` 补丁版本加一；未发布插件无需单独递增版本。
 
