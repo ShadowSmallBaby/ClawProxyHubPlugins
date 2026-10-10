@@ -1,0 +1,10 @@
+{
+  "name": "cnb",
+  "version": "0.1.0",
+  "author": "cph",
+  "label": {
+    "zh": "CNB",
+    "en": "CNB"
+  },
+  "protocol_version": 2
+}

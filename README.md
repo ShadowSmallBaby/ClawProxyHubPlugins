@@ -14,6 +14,7 @@
 
 | 插件 | 说明 | 能力 |
 | --- | --- | --- |
+| `cnb` | CNB 仓库 AI 网关：流水线 Token、仓库实例、OpenAI SSE 与原生工具调用 | chat / models / login / instances |
 | `lobsterai` | 网易有道 LobsterAI：浏览器 OAuth / 凭据文件登录，每日签到 | chat / models / login / tasks |
 | `workbuddy` | 腾讯 WorkBuddy / CodeBuddy：手机验证码 / 浏览器授权 / 凭据文件登录，签到、盲盒、旅行、成长任务 | chat / models / login / refresh / tasks |
 | `newapi` | New API（QuantumNous/new-api）：API 密钥 / 密码 / 凭据文件登录，余额折算与每日签到；多实例（不同站点各建实例填 `base_url`） | chat / models / login / refresh / tasks / instances |
