@@ -136,7 +136,7 @@ Android 市场对 Go 插件使用 `platforms.android` 初筛，安装时读取�
 
 ## 生成流程
 
-1. `go run ./tools/pack -only newapi,autoclaw` 生成桌面或 Lua `.cphplugin` 和 `build`；此时索引只包含基础条目。
+1. `go run ./tools/pack -only newapi,autoclaw` 生成桌面或 Lua `.cphplugin` 和 `build/index.json`；此时索引只包含基础条目。
 2. [Android 构建工程](android/README.md)生成签名原生包，`verify_packages.py` 校验签名、文件摘要和 ELF。
 3. `tools/android_release.py` 收集实际 Android 产物，`tools/release_manifest.py` 拆分平台包、生成发布清单，补充 `protocol_version`、`platforms` 和 `release_manifest`。
 4. CI 校验或上传全部不可变资产后，才回写唯一的 `index.json`。索引由 CI 维护，不手工为未上传的包填写下载地址。

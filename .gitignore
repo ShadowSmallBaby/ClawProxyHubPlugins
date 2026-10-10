@@ -2,6 +2,10 @@
 /build/
 *.exe
 __pycache__/
+/.cache/
+.env
+.env.*
+!.env.example
 
 # 本地多模块开发（go work init . ../ClawProxyHub）
 go.work

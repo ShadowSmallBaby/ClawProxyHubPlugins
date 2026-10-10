@@ -36,6 +36,11 @@
 | `puter` | Puter 驱动调用反代：粘贴浏览器 auth_token（whoami 校验 + 月用量），NDJSON 流 | chat / models / login / refresh |
 | `warp` | Warp 多代理 API：设备授权登录 → Firebase refresh token 周期续期，官方 ConnectRPC 协议 | chat / models / login / refresh |
 | `zcode` | ZCode Proxy（GLM 编码套餐）：OAuth 设备码登录，Anthropic 端点直连（双密钥）+ JWT 网关 | chat / models / login / refresh / account |
+| `codearts` | 华为云 CodeArts Agent：IAM AK/SK 凭据、签名请求与每日签到 | chat / models / login / refresh / account / tasks |
+| `devin` | Devin：会话认证、模型目录与对话转发 | chat / models / login / refresh / account |
+| `loomy` | 讯飞 Loomy：Web Cookie 认证、纯文本对话 | chat / models / login / refresh / account / tasks |
+| `raccoon` | 商汤 Raccoon Work：扫码登录、Bearer 认证与对话转发 | chat / models / login / refresh / account / tasks |
+| `trae` | TRAE CN：浏览器授权、Token 导入与自动续期 | chat / models / login / refresh / account / tasks |
 
 ### Lua 插件（`plugins-lua/`）
 
@@ -65,7 +70,7 @@ plugins/
 
 Go 插件实现 `pb.ClawPluginServer`（契约见核心 `sdk/proto/cph.proto`），复用 `sdk/openaiup` / `sdk/anthropicup` / `sdk/responsesup` 适配 OpenAI / Anthropic / Responses 方言上游；宿主回调（日志 / 存储 / 代理 / 设置）实现 `sdk.HostAware`。
 
-Go 插件业务包位于插件根目录，提供 `New(version)`，桌面入口位于 `cmd/main.go`。手动编译 newapi 使用 `go build -o newapi ./plugins-go/newapi/cmd`，Android 入口直接导入 `plugins-go/newapi` 包。打包器兼容根目录为 `package main` 的桌面插件。
+Go 插件业务包位于插件根目录，提供 `New(version)`，桌面入口位于 `cmd/main.go`。手动编译 newapi 使用 `go build -o build/newapi ./plugins-go/newapi/cmd`，Android 入口直接导入 `plugins-go/newapi` 包。打包器兼容根目录为 `package main` 的桌面插件。
 
 Lua 插件跑在宿主提供的 Lua Host 沙箱 VM 里：约定函数 `handshake/chat/models/login/refresh/profile`（与 Go 插件 Handshake 同构），宿主能力 `cph.*`（http/json/hash/time/random/log/openai）承接一切出站与日志。
 
@@ -82,6 +87,8 @@ go build ./... && go test ./...
 go run ./tools/pack -install ../ClawProxyHub/data/plugins
 ```
 
+上例安装路径适用于两个仓库并列检出；作为核心的 `plugins/` 子模块开发时，使用 `-install ../data/plugins`。
+
 升级 SDK 时，先发布核心 tag，再执行 `go get github.com/ShadowSmallBaby/ClawProxyHub@vX.Y.Z` 和 `go mod tidy`（将 `vX.Y.Z` 换成实际发布的 tag）。验证后递增已发布插件的 `manifest.json` 补丁版本，未发布插件无需单独递增版本。
 
 ## 打包与发布
@@ -91,7 +98,7 @@ go run ./tools/pack            # build/<name>-<version>.cphplugin + build/index.
 go run ./tools/pack -only workbuddy
 ```
 
-- 包格式：统一 `.cphplugin`（zip 容器），含 `manifest.json`、图标与 `plugin-<os>-<arch>[.exe]`（windows/amd64、linux/amd64、linux/arm64、darwin/amd64、darwin/arm64）；Lua 插件跳过 go build、产平台无关 `.cphplugin`（包内只含 `main.lua` + 可选 `lib/*.lua`）；固定时间戳，同一输入产出同一 sha256。市场条目带 `runtime` 字段（`go` / `lua`）
+- 包格式：统一 `.cphplugin`（zip 容器），含 `manifest.json`、图标与 `plugin-<os>-<arch>[.exe]`（windows/amd64、linux/amd64、linux/arm64、darwin/amd64、darwin/arm64）；Lua 插件跳过 go build、产平台无关 `.cphplugin`（包内含清单、`main.lua`、可选图标及 `lib/*.lua`）；固定时间戳，同一输入产出同一 sha256。市场条目带 `runtime` 字段（`go` / `lua`）
 - 发布：改 `manifest.json` 的 `version` → 合入 main → CI 为每个新版本创建 Release `<name>-v<version>`（资产 `<name>-<version>.cphplugin`）并回写 `index.json`
 - 已发布版本不可变：改代码必须升版本，否则 CI 跳过该插件
 - 核心默认市场地址：`https://raw.githubusercontent.com/ShadowSmallBaby/ClawProxyHubPlugins/main/index.json`

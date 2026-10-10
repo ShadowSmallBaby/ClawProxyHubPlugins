@@ -9,7 +9,7 @@
 ## 1. 心智模型
 
 - **进程模型**：每个插件是一个独立可执行文件，核心用 [hashicorp/go-plugin](https://github.com/hashicorp/go-plugin) 以 gRPC 子进程方式拉起。核心是 gRPC 客户端调用插件（`ClawPlugin` 服务），插件反向调用核心（`ClawHost` 服务）。**Lua 插件**（§11）例外：脚本身，由宿主提供的 Lua Host 解释执行，对核心 manager 仍呈现同一 gRPC 契约。
-- **唯一耦合点**：`cph.proto`。核心不认识任何具体插件，插件只实现契约。握手时双方校验 `protocol_version`，不一致直接拒载。
+- **唯一耦合点**：`cph.proto`。核心不认识任何具体插件，插件只实现契约。核心在 SDK 声明的最小/当前版本区间内协商 `protocol_version`，插件握手须与协商结果一致。
 - **凭据代管**：账号凭据是插件自定义格式的 opaque `blob`，核心只存不解析。插件通过 RPC 返回值把变更后的 blob 交回核心持久化。
 - **实例维度（v2）**：一个插件可挂多个「实例」（= 一个站点 / 部署）。核心固定提供 `name + base_url`，插件用 `instance_schema` 声明站点特有字段。登录 / 刷新 / 设置 / 任务回调都按 `instance_id` 区分。未声明 `instances` 能力的插件只有一个默认实例。
 - **统一信封**：核心网关把 OpenAI / Anthropic / Responses 三种协议入口归一化成一个 `ChatRequest` 信封投递给插件，插件转成上游方言、回吐统一 `StreamEvent` 事件流，核心再转回各协议的 SSE。
