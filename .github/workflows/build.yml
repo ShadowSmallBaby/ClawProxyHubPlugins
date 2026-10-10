@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths-ignore: ["index.json", "README.md", "AGENTS.md", "LICENSE"]
   pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       run_checks:
@@ -26,18 +27,13 @@ concurrency:
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
       BASE_URL: https://github.com/${{ github.repository }}/releases/download
     steps:
       - uses: actions/checkout@v4
-
-      - name: Check publication target
-        if: github.event_name == 'workflow_dispatch' && inputs.publish == true && github.ref != 'refs/heads/main'
-        run: |
-          echo 'Publication is only available from main.' >&2
-          exit 1
 
       - uses: actions/setup-go@v5
         with:
@@ -76,6 +72,7 @@ jobs:
 
 
   android:
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
