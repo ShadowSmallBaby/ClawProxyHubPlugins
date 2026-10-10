@@ -45,7 +45,7 @@ Windows 使用 `./android/gradlew.bat`。`cphPlugins` 支持逗号分隔名称�
 
 GitHub Actions 在两个仓库配置相同的 `CPH_ANDROID_KEYSTORE_BASE64` 及上述后三项 Secrets。本库 `prepare_signing.py` 只在 runner 临时目录还原密钥，导出 `CPH_ANDROID_KEYSTORE` 与证书摘要，工作流结束后删除临时文件。PR 使用 debug 签名，仅上传检查产物。
 
-PR 始终执行 Go 静态检查、单元测试和发布脚本测试；main 自动发布跳过这组重复检测，手动运行可用 `run_checks=true` 开启。SDK 检查、构建与包验签始终执行。
+仅目标为 main 的 PR 和 main 推送自动运行 CI；手动运行也仅 main 执行构建，选择其他分支时任务跳过。目标为 main 的 PR 始终执行 Go 静态检查、单元测试和发布脚本测试；main 自动发布跳过这组重复检测，手动运行可用 `run_checks=true` 开启。SDK 检查、构建与包验签始终执行。
 
 手动运行 `build` 默认 `publish=false`，使用正式签名构建和验证，将包上传到 Actions 附件。合入 `main` 会自动发布；手动补发需选择 `main` 并设置 `publish=true`。发布使用工作流声明的 `contents: write` 权限，分支规则还须允许该工作流回写 `index.json`。
 

@@ -2,10 +2,13 @@ package tests
 
 import (
 	"context"
+	"testing"
+
 	"github.com/ShadowSmallBaby/ClawProxyHub/sdk"
 	pb "github.com/ShadowSmallBaby/ClawProxyHub/sdk/proto/cphv1"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/chatjimmy"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/cline"
+	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/cnb"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/codearts"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/codebuff"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/commandcode"
@@ -31,7 +34,6 @@ import (
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/warp"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/workbuddy"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/zcode"
-	"testing"
 )
 
 // 平台入口依赖同一工厂契约；多个实例的版本不能互相覆盖。
@@ -42,6 +44,7 @@ func TestPluginFactories(t *testing.T) {
 	}{
 		{"chatjimmy", chatjimmy.New},
 		{"cline", cline.New},
+		{"cnb", cnb.New},
 		{"codearts", codearts.New},
 		{"codebuff", codebuff.New},
 		{"commandcode", commandcode.New},

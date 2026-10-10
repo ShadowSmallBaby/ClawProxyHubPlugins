@@ -47,6 +47,8 @@ type plugin struct {
 	settings map[int64]cachedSettings // instance_id → 实例视图设置缓存
 	// loadSettings 实例视图设置读取（默认走宿主 RPC；测试注入假数据）
 	loadSettings func(instanceID int64) []byte
+	// loadChallengeSettings 仅用于注入插件级配置读取，不共享实例缓存。
+	loadChallengeSettings func(context.Context) ([]byte, error)
 }
 
 type cachedSettings struct {
@@ -77,13 +79,14 @@ const (
 )
 
 type siteConfig struct {
-	BaseURL       string  `json:"base_url"`
-	InstanceName  string  `json:"instance_name"`
-	QuotaPerUnit  float64 `json:"quota_per_unit,string"`
-	BrowserUA     string  `json:"-"` // 管理面 / 会话 UA：核心全局浏览器 UA，空回退内置
-	CheckinMode   string  `json:"checkin_mode"`
-	CheckinURL    string  `json:"checkin_url"`
-	ResponsesMode string  `json:"responses_mode"`
+	BaseURL          string  `json:"base_url"`
+	InstanceName     string  `json:"instance_name"`
+	QuotaPerUnit     float64 `json:"quota_per_unit,string"`
+	BrowserUA        string  `json:"-"` // 管理面 / 会话 UA：核心全局浏览器 UA，空回退内置
+	CheckinMode      string  `json:"checkin_mode"`
+	CheckinURL       string  `json:"checkin_url"`
+	ChallengeEnabled bool    `json:"challenge_enabled"`
+	ResponsesMode    string  `json:"responses_mode"`
 }
 
 // site 读实例视图设置（30s 缓存）；base_url 缺失即报错，避免打到空地址。
@@ -109,6 +112,12 @@ func (p *plugin) site(instanceID int64) (*siteConfig, error) {
 				cfg.CheckinMode = rawString(loose["checkin_mode"])
 				cfg.ResponsesMode = strings.TrimSpace(rawString(loose["responses_mode"]))
 				cfg.CheckinURL = strings.TrimSpace(rawString(loose["checkin_url"]))
+				if v, ok := loose["challenge_enabled"]; ok {
+					var enabled bool
+					if json.Unmarshal(v, &enabled) == nil {
+						cfg.ChallengeEnabled = enabled
+					}
+				}
 				cfg.BrowserUA = strings.TrimSpace(rawString(loose[sdk.SettingBrowserUserAgent]))
 			}
 		}
@@ -237,7 +246,7 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 		ProtocolVersion: sdk.ProtocolVersion,
 		Capabilities:    []string{"chat", "models", "login", "refresh", "tasks", sdk.CapabilityInstances},
 		Endpoints:       []string{"chat_completions", "messages", "responses"},
-		SettingsSchema:  `{"type": "object", "properties": {}}`,
+		SettingsSchema:  challengeSettingsSchema(),
 		InstanceSchema: `{
 			"type": "object",
 			"properties": {
@@ -276,6 +285,12 @@ func (p *plugin) Handshake(ctx context.Context, req *pb.HandshakeRequest) (*pb.H
 					"description": "站点签到时提醒用户前往的地址",
 					"default": "",
 					"x-depends": {"checkin_mode": "site"}
+				},
+				"challenge_enabled": {
+					"type": "boolean",
+					"title": "启用 Turnstile 验证",
+					"description": "仅对当前实例启用插件级验证服务；关闭时不会请求验证服务",
+					"default": false
 				},
 				"linuxdo_client_id": {
 					"type": "string",
