@@ -11,11 +11,11 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/autoclaw-v0.1.3/autoclaw-0.1.3.cphplugin",
     "sha256": "4bfd896560f856ba972594a0a50edd06908144399b8ee01bcb31498c174b887c",
-    "protocol_version": 2,
     "release_manifest": {
       "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/autoclaw-v0.1.3/manifest.json",
       "sha256": "99f3b0bf30c7b6362eeab54f6c66d36432bf0d7280f9efda1cdf0870fce88195"
-    }
+    },
+    "protocol_version": 2
   },
   {
     "name": "chatjimmy",
@@ -28,11 +28,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/chatjimmy-v0.1.3/chatjimmy-0.1.3.cphplugin",
     "sha256": "6a003f33ca7f3fca9f471dcc344f4e2f4e50d38aa25014a80c0258c8938349ae",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/chatjimmy-v0.1.3/manifest.json",
-      "sha256": "0c4383b88cce5204b340ace573ef5ae375d118f7d0cad22f1b2d2a95d94df029"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -48,7 +43,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/chatjimmy-v0.1.3/manifest.json",
+      "sha256": "0c4383b88cce5204b340ace573ef5ae375d118f7d0cad22f1b2d2a95d94df029"
+    },
+    "protocol_version": 2
   },
   {
     "name": "cline",
@@ -61,10 +61,43 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cline-v0.1.7/cline-0.1.7.cphplugin",
     "sha256": "0ab61756f7788d394870bfd7205a5c53631b721be0fb043c1b5fdb8de74b5b67",
-    "protocol_version": 2,
+    "platforms": {
+      "windows": [
+        "amd64"
+      ],
+      "linux": [
+        "amd64",
+        "arm64"
+      ],
+      "darwin": [
+        "amd64",
+        "arm64"
+      ],
+      "android": [
+        "arm64-v8a"
+      ]
+    },
     "release_manifest": {
       "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cline-v0.1.7/manifest.json",
       "sha256": "cd314cea24770bd93ed78c2bc6069dd7884d5b83c6d7f4936b0d49c33f4b73d9"
+    },
+    "protocol_version": 2
+  },
+  {
+    "name": "cnb",
+    "version": "0.1.0",
+    "author": "cph",
+    "label": {
+      "en": "CNB",
+      "zh": "CNB"
+    },
+    "published_at": "2026-10-10",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cnb-v0.1.0/cnb-0.1.0.cphplugin",
+    "sha256": "5e8e9800b0cffa420441f30323bc2ec888d5c9630ff3dbded79fe3bd4c0a5abc",
+    "protocol_version": 2,
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cnb-v0.1.0/manifest.json",
+      "sha256": "5d7000c0091101ba5d8062b7be44f5d5cc90173d9011202fd689c0a8454f5ed3"
     },
     "platforms": {
       "windows": [
@@ -94,11 +127,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/codearts-v0.1.2/codearts-0.1.2.cphplugin",
     "sha256": "046363b0a9883a1e027eeccec4ab1041ddfa0ec7434efd4ca0d22f3a15a706f7",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/codearts-v0.1.2/manifest.json",
-      "sha256": "15f71f6b98e4717fb0f06e9d303caf56161493ccb4b3fb91340ddc233d82be63"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -114,7 +142,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/codearts-v0.1.2/manifest.json",
+      "sha256": "15f71f6b98e4717fb0f06e9d303caf56161493ccb4b3fb91340ddc233d82be63"
+    },
+    "protocol_version": 2
   },
   {
     "name": "codebuff",
@@ -127,11 +160,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/codebuff-v0.1.3/codebuff-0.1.3.cphplugin",
     "sha256": "9c12ae987d3cd5dfc667de4252ab7607ee6617d86cfb6e98c2f8a7978c74e0d6",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/codebuff-v0.1.3/manifest.json",
-      "sha256": "ebc81a49b3060b578b51a457521461d5a25df7e44c7847dd2196362ecd8356ee"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -147,7 +175,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/codebuff-v0.1.3/manifest.json",
+      "sha256": "ebc81a49b3060b578b51a457521461d5a25df7e44c7847dd2196362ecd8356ee"
+    },
+    "protocol_version": 2
   },
   {
     "name": "commandcode",
@@ -160,11 +193,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/commandcode-v0.1.4/commandcode-0.1.4.cphplugin",
     "sha256": "a857d7d8ac8f40a2ab6457166aeeda3faa3ea3e2dd95745b85242eee5c88ce26",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/commandcode-v0.1.4/manifest.json",
-      "sha256": "5107145d1b87a8e893f6a6b9b2bf12cf5c5ca5513c8718eec34fd50191bbf09d"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -180,7 +208,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/commandcode-v0.1.4/manifest.json",
+      "sha256": "5107145d1b87a8e893f6a6b9b2bf12cf5c5ca5513c8718eec34fd50191bbf09d"
+    },
+    "protocol_version": 2
   },
   {
     "name": "devin",
@@ -193,11 +226,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/devin-v0.1.1/devin-0.1.1.cphplugin",
     "sha256": "a890a84d0e042dad125124d86f6bbd040ecc5a198ced144a60375dfbd847bf54",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/devin-v0.1.1/manifest.json",
-      "sha256": "df554c6a2feddcd2af25ace2d788010bfbb331521327390c06fc078e4a20710e"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -213,7 +241,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/devin-v0.1.1/manifest.json",
+      "sha256": "df554c6a2feddcd2af25ace2d788010bfbb331521327390c06fc078e4a20710e"
+    },
+    "protocol_version": 2
   },
   {
     "name": "doubao",
@@ -226,11 +259,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/doubao-v0.1.4/doubao-0.1.4.cphplugin",
     "sha256": "12c77fce665c77c9ff8f727d57375da6120321cb514e5354ae5bd200fda0ed6e",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/doubao-v0.1.4/manifest.json",
-      "sha256": "43f688811952ee3d341149553f5abf5937a0d61a95bdd2c066adf63d73faa63a"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -246,7 +274,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/doubao-v0.1.4/manifest.json",
+      "sha256": "43f688811952ee3d341149553f5abf5937a0d61a95bdd2c066adf63d73faa63a"
+    },
+    "protocol_version": 2
   },
   {
     "name": "gorkcli",
@@ -259,11 +292,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/gorkcli-v0.1.3/gorkcli-0.1.3.cphplugin",
     "sha256": "ba0c42a4c525876a0bef98507893aa65a3086d06ab2c42574e831e78165ea25a",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/gorkcli-v0.1.3/manifest.json",
-      "sha256": "ab402279100c5a6b826243e38ddb2a6cd4b1a4cb9fb0261633fb6e64942c7ab0"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -279,7 +307,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/gorkcli-v0.1.3/manifest.json",
+      "sha256": "ab402279100c5a6b826243e38ddb2a6cd4b1a4cb9fb0261633fb6e64942c7ab0"
+    },
+    "protocol_version": 2
   },
   {
     "name": "ima",
@@ -292,11 +325,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/ima-v0.1.5/ima-0.1.5.cphplugin",
     "sha256": "fd0ed4c602ccb9fb083a57befae5deeb9bf2658490eb7e263c9aaf0697944353",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/ima-v0.1.5/manifest.json",
-      "sha256": "7522d5fee643915158644aa83bf2318af9c73e462192e3f533cbd851d2049162"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -312,7 +340,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/ima-v0.1.5/manifest.json",
+      "sha256": "7522d5fee643915158644aa83bf2318af9c73e462192e3f533cbd851d2049162"
+    },
+    "protocol_version": 2
   },
   {
     "name": "improvado",
@@ -325,11 +358,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/improvado-v0.1.3/improvado-0.1.3.cphplugin",
     "sha256": "1faca11a3c6ea38bf1286110e35d533c8434f45dbc82054c60d7a3dcc320b514",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/improvado-v0.1.3/manifest.json",
-      "sha256": "fdc5e75950b63457abfe729829eb87e3e7a1678fb5e9682f658e3e9b36f7731e"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -345,7 +373,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/improvado-v0.1.3/manifest.json",
+      "sha256": "fdc5e75950b63457abfe729829eb87e3e7a1678fb5e9682f658e3e9b36f7731e"
+    },
+    "protocol_version": 2
   },
   {
     "name": "joycode",
@@ -358,11 +391,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/joycode-v0.1.3/joycode-0.1.3.cphplugin",
     "sha256": "cb2dc3b91fe3d306506c1585a2d14264eb17787b1c0f0df83b1d29403be02b5d",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/joycode-v0.1.3/manifest.json",
-      "sha256": "d1726d0e231bebe29d34835f095be9f9675ec1856a9a881628e1c7e442a40328"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -378,7 +406,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/joycode-v0.1.3/manifest.json",
+      "sha256": "d1726d0e231bebe29d34835f095be9f9675ec1856a9a881628e1c7e442a40328"
+    },
+    "protocol_version": 2
   },
   {
     "name": "lobsterai",
@@ -391,11 +424,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.9/lobsterai-0.1.9.cphplugin",
     "sha256": "6c4cdb445dee3c0784a350cfc1d07d2664203c65e92ac779687c9775d0465e97",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.9/manifest.json",
-      "sha256": "c8cf1a1879168b3dd1447ec243ab2641efbd45cdad0a0884f79a0c66df3bd558"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -411,7 +439,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/lobsterai-v0.1.9/manifest.json",
+      "sha256": "c8cf1a1879168b3dd1447ec243ab2641efbd45cdad0a0884f79a0c66df3bd558"
+    },
+    "protocol_version": 2
   },
   {
     "name": "loomy",
@@ -424,11 +457,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/loomy-v0.1.3/loomy-0.1.3.cphplugin",
     "sha256": "8c43996e893f3176c65d31c3a3ef811e80b4ed839ed2881e6bb482911170fc03",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/loomy-v0.1.3/manifest.json",
-      "sha256": "e0e48517d70cbfa011a75080d484125e2e746d58f877d710993048af4906ed62"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -444,7 +472,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/loomy-v0.1.3/manifest.json",
+      "sha256": "e0e48517d70cbfa011a75080d484125e2e746d58f877d710993048af4906ed62"
+    },
+    "protocol_version": 2
   },
   {
     "name": "mimo",
@@ -457,11 +490,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/mimo-v0.1.3/mimo-0.1.3.cphplugin",
     "sha256": "acc7c18c016156042a62e626f34da935e7196a5696a0865e49350614b87fb7d7",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/mimo-v0.1.3/manifest.json",
-      "sha256": "294e9c8e7e1398f99f8f7de902f7fb72919fc4f94bac2784221ed9bf64c3ba43"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -477,7 +505,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/mimo-v0.1.3/manifest.json",
+      "sha256": "294e9c8e7e1398f99f8f7de902f7fb72919fc4f94bac2784221ed9bf64c3ba43"
+    },
+    "protocol_version": 2
   },
   {
     "name": "mirasim",
@@ -490,11 +523,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/mirasim-v0.1.3/mirasim-0.1.3.cphplugin",
     "sha256": "5d9c5885ad1537f46e5a6af39685d0e213238e22cc3652ee794b8f95766b1d13",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/mirasim-v0.1.3/manifest.json",
-      "sha256": "b88b200c20e086e8d75fdf3a319435a0bdd069a19d1f981d8ec3c304b41e7879"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -510,23 +538,28 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/mirasim-v0.1.3/manifest.json",
+      "sha256": "b88b200c20e086e8d75fdf3a319435a0bdd069a19d1f981d8ec3c304b41e7879"
+    },
+    "protocol_version": 2
   },
   {
     "name": "newapi",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "author": "cph",
     "label": {
       "en": "New API",
       "zh": "New API"
     },
     "published_at": "2026-10-10",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.6/newapi-0.1.6.cphplugin",
-    "sha256": "42fc19e97ce70f1fa45cab778a9fa63757b32003d9f13305bfb1224efb542ab4",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.7/newapi-0.1.7.cphplugin",
+    "sha256": "0d65a3f65914f6cb00324fb8b7b589d7dd608d01f434f1fa17b012462e98976b",
     "protocol_version": 2,
     "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.6/manifest.json",
-      "sha256": "1022738e162b3f792a31d6f3474e94446cab2935bd1f5c76393dd0ec7db50d9a"
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.7/manifest.json",
+      "sha256": "12f02b55b62b105ef50c56e89e66575859747f4e61f0b0bc5154d32f3f5fb6ec"
     },
     "platforms": {
       "windows": [
@@ -556,11 +589,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/notion-v0.1.3/notion-0.1.3.cphplugin",
     "sha256": "a667545bd47a6482007752b095e27d3e8e97816c97b084c2198323ac38d262b7",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/notion-v0.1.3/manifest.json",
-      "sha256": "93a911454bcc750fd4a52531771a34cc3e2901e26b3e7969649d34152bc6f066"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -576,7 +604,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/notion-v0.1.3/manifest.json",
+      "sha256": "93a911454bcc750fd4a52531771a34cc3e2901e26b3e7969649d34152bc6f066"
+    },
+    "protocol_version": 2
   },
   {
     "name": "opencode",
@@ -589,11 +622,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/opencode-v0.1.6/opencode-0.1.6.cphplugin",
     "sha256": "d058303e78707c9f4ab1306676c988f8975a3c5ec8bc8c28e88599532f5724fd",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/opencode-v0.1.6/manifest.json",
-      "sha256": "2e4fc1a79a9df94abf04f87f744b5748fbb84c879614d7833dd23ba77d3e8746"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -609,7 +637,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/opencode-v0.1.6/manifest.json",
+      "sha256": "2e4fc1a79a9df94abf04f87f744b5748fbb84c879614d7833dd23ba77d3e8746"
+    },
+    "protocol_version": 2
   },
   {
     "name": "postman",
@@ -622,11 +655,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/postman-v0.1.3/postman-0.1.3.cphplugin",
     "sha256": "88eb760f5414483866b347bfb676d8ecbfd5ee259caf591e0e67f6e2f8d6d80b",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/postman-v0.1.3/manifest.json",
-      "sha256": "12bac047d7c18c436976fe3b729bde0b1a25e34ddb83e11638ab5aaee8911301"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -642,7 +670,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/postman-v0.1.3/manifest.json",
+      "sha256": "12bac047d7c18c436976fe3b729bde0b1a25e34ddb83e11638ab5aaee8911301"
+    },
+    "protocol_version": 2
   },
   {
     "name": "puter",
@@ -655,11 +688,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/puter-v0.1.3/puter-0.1.3.cphplugin",
     "sha256": "7c2a910826e31b18f1a4f93317877a1f8b1e29d4212cefe9ac3f381da0cc7526",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/puter-v0.1.3/manifest.json",
-      "sha256": "3b339dab74cd45fd0d891b136e70e6f83750647a823d87eb06866348d0006081"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -675,7 +703,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/puter-v0.1.3/manifest.json",
+      "sha256": "3b339dab74cd45fd0d891b136e70e6f83750647a823d87eb06866348d0006081"
+    },
+    "protocol_version": 2
   },
   {
     "name": "qoder",
@@ -688,11 +721,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/qoder-v0.1.3/qoder-0.1.3.cphplugin",
     "sha256": "03b401ebbc72c96fb49d6c049cd0218bdc147a65f920fea2576da924508265eb",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/qoder-v0.1.3/manifest.json",
-      "sha256": "fdf8300f7c3f299cb29eaaf423be5d58dc0eaabb05e4f35f0b70e07030e14394"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -708,7 +736,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/qoder-v0.1.3/manifest.json",
+      "sha256": "fdf8300f7c3f299cb29eaaf423be5d58dc0eaabb05e4f35f0b70e07030e14394"
+    },
+    "protocol_version": 2
   },
   {
     "name": "raccoon",
@@ -721,11 +754,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/raccoon-v0.1.2/raccoon-0.1.2.cphplugin",
     "sha256": "fbf7c952088769638f4eee4d33a31f231117a4fb071c3ee2b225eb13c5724ce8",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/raccoon-v0.1.2/manifest.json",
-      "sha256": "e630190f8165379e2bb0ca85c77646c708bb94b4e78a2c823418abe9a83f201a"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -741,7 +769,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/raccoon-v0.1.2/manifest.json",
+      "sha256": "e630190f8165379e2bb0ca85c77646c708bb94b4e78a2c823418abe9a83f201a"
+    },
+    "protocol_version": 2
   },
   {
     "name": "todofor",
@@ -754,11 +787,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/todofor-v0.1.3/todofor-0.1.3.cphplugin",
     "sha256": "c5518afe656cda03608562ca1edfdb35684b74c21f69f37bb3e6cf309b177b3e",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/todofor-v0.1.3/manifest.json",
-      "sha256": "54c1c846af7d6514e576f31f384a2aad9fce5d28f659cf1ea14cc202f6332bb5"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -774,7 +802,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/todofor-v0.1.3/manifest.json",
+      "sha256": "54c1c846af7d6514e576f31f384a2aad9fce5d28f659cf1ea14cc202f6332bb5"
+    },
+    "protocol_version": 2
   },
   {
     "name": "trae",
@@ -787,11 +820,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/trae-v0.1.2/trae-0.1.2.cphplugin",
     "sha256": "a0d88987328477932ddd207d30547899ccbdfbebc604879b7f667d60b79e319b",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/trae-v0.1.2/manifest.json",
-      "sha256": "77c289a011f8d67b1c8db6ab3dbbd3379def3e768812a7d8c700fe9749e3f0ba"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -807,7 +835,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/trae-v0.1.2/manifest.json",
+      "sha256": "77c289a011f8d67b1c8db6ab3dbbd3379def3e768812a7d8c700fe9749e3f0ba"
+    },
+    "protocol_version": 2
   },
   {
     "name": "warp",
@@ -820,11 +853,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/warp-v0.1.1/warp-0.1.1.cphplugin",
     "sha256": "c8e310c8e97e2b7b21a75d4803fc8000d3bf62bc15d0d719d71845c7efa2d8b1",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/warp-v0.1.1/manifest.json",
-      "sha256": "52d4c7d9ce883116d7e112dc41071ebe06e848b756b91203b37c6e7c602e5642"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -840,7 +868,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/warp-v0.1.1/manifest.json",
+      "sha256": "52d4c7d9ce883116d7e112dc41071ebe06e848b756b91203b37c6e7c602e5642"
+    },
+    "protocol_version": 2
   },
   {
     "name": "workbuddy",
@@ -853,11 +886,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.9/workbuddy-0.1.9.cphplugin",
     "sha256": "0617ecd759c3616406a07adaa329fd02e0af33aa526aba47ba932c3f25eeae10",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.9/manifest.json",
-      "sha256": "592886d808c91518e6ef5ef603d7a7bcf142346b92571f429d87e8b2b40a7832"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -873,7 +901,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.9/manifest.json",
+      "sha256": "592886d808c91518e6ef5ef603d7a7bcf142346b92571f429d87e8b2b40a7832"
+    },
+    "protocol_version": 2
   },
   {
     "name": "zcode",
@@ -886,11 +919,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/zcode-v0.1.3/zcode-0.1.3.cphplugin",
     "sha256": "5d0a212b5dc2133e4aad3245225ddb87ef1b87f1decea3352d753948044a5c72",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/zcode-v0.1.3/manifest.json",
-      "sha256": "5adc36c5c470c4f5793a45c0867115ba11d3af86da716628c16f0abbfae99eae"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -906,6 +934,11 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/zcode-v0.1.3/manifest.json",
+      "sha256": "5adc36c5c470c4f5793a45c0867115ba11d3af86da716628c16f0abbfae99eae"
+    },
+    "protocol_version": 2
   }
 ]
