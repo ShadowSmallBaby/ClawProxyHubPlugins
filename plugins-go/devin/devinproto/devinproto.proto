@@ -1,0 +1,307 @@
+// Devin 插件使用的请求、响应和模型协议。
+// 重新生成：protoc --go_out=. --go_opt=paths=source_relative devinproto.proto
+syntax = "proto3";
+package exa.api_server_pb;
+option go_package = "github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/devin/devinproto";
+
+enum ChatMessageRequestType {
+  CHAT_MESSAGE_REQUEST_TYPE_UNSPECIFIED = 0;
+  CHAT_MESSAGE_REQUEST_TYPE_GENERAL = 1;
+  CHAT_MESSAGE_REQUEST_TYPE_CONTEXT_CHECK = 2;
+  CHAT_MESSAGE_REQUEST_TYPE_PLAN = 3;
+  CHAT_MESSAGE_REQUEST_TYPE_COMMAND = 4;
+  CHAT_MESSAGE_REQUEST_TYPE_CASCADE = 5;
+  CHAT_MESSAGE_REQUEST_TYPE_EVAL = 6;
+  CHAT_MESSAGE_REQUEST_TYPE_WINDSURF_REVIEW = 7;
+  CHAT_MESSAGE_REQUEST_TYPE_VIBE_AND_REPLACE = 8;
+  CHAT_MESSAGE_REQUEST_TYPE_DEEPWIKI = 9;
+  CHAT_MESSAGE_REQUEST_TYPE_DEVSTRAL = 10;
+  CHAT_MESSAGE_REQUEST_TYPE_CODEMAP_GENERATION = 11;
+  CHAT_MESSAGE_REQUEST_TYPE_CODEMAP_SUGGESTIONS = 12;
+  CHAT_MESSAGE_REQUEST_TYPE_SMART_FRIEND = 13;
+  CHAT_MESSAGE_REQUEST_TYPE_LIFEGUARD = 14;
+  CHAT_MESSAGE_REQUEST_TYPE_CHECKPOINT = 15;
+}
+
+enum ExaCodeiumCommonPb_StopReason {
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_UNSPECIFIED = 0;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_INCOMPLETE = 1;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_STOP_PATTERN = 2;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_MAX_TOKENS = 3;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_MIN_LOG_PROB = 4;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_MAX_NEWLINES = 5;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_EXIT_SCOPE = 6;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_NONFINITE_LOGIT_OR_PROB = 7;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_FIRST_NON_WHITESPACE_LINE = 8;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_PARTIAL = 9;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_FUNCTION_CALL = 10;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_CONTENT_FILTER = 11;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_NON_INSERTION = 12;
+  ExaCodeiumCommonPb_StopReason_STOP_REASON_ERROR = 13;
+}
+
+enum ExaCodeiumCommonPb_ChatMessageSource {
+  ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_UNSPECIFIED = 0;
+  ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_USER = 1;
+  ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_SYSTEM = 2;
+  ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_UNKNOWN = 3;
+  ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_TOOL = 4;
+  ExaCodeiumCommonPb_ChatMessageSource_CHAT_MESSAGE_SOURCE_SYSTEM_PROMPT = 5;
+}
+
+enum ExaCodeiumCommonPb_ModelProvider {
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_UNSPECIFIED = 0;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_WINDSURF = 1;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_OPENAI = 2;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_ANTHROPIC = 3;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_GOOGLE = 4;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_XAI = 5;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_DEEPSEEK = 6;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_MOONSHOT = 7;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_QWEN = 8;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_ZAI = 9;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_MINIMAX = 10;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_NVIDIA = 11;
+  ExaCodeiumCommonPb_ModelProvider_MODEL_PROVIDER_THINKING_MACHINES = 12;
+}
+
+enum ExaCodeiumCommonPb_ConversationalPlannerMode {
+  ExaCodeiumCommonPb_ConversationalPlannerMode_CONVERSATIONAL_PLANNER_MODE_UNSPECIFIED = 0;
+  ExaCodeiumCommonPb_ConversationalPlannerMode_CONVERSATIONAL_PLANNER_MODE_DEFAULT = 1;
+  ExaCodeiumCommonPb_ConversationalPlannerMode_CONVERSATIONAL_PLANNER_MODE_READ_ONLY = 2;
+  ExaCodeiumCommonPb_ConversationalPlannerMode_CONVERSATIONAL_PLANNER_MODE_NO_TOOL = 3;
+  ExaCodeiumCommonPb_ConversationalPlannerMode_CONVERSATIONAL_PLANNER_MODE_EXPLORE = 4;
+  ExaCodeiumCommonPb_ConversationalPlannerMode_CONVERSATIONAL_PLANNER_MODE_PLANNING = 5;
+  ExaCodeiumCommonPb_ConversationalPlannerMode_CONVERSATIONAL_PLANNER_MODE_AUTO = 6;
+}
+
+enum ExaCortexPb_CortexTrajectoryType {
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_UNSPECIFIED = 0;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_USER_MAINLINE = 1;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_USER_GRANULAR = 2;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_SUPERCOMPLETE = 3;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_CASCADE = 4;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_BACKGROUND_RESEARCH = 5;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_CHECKPOINT = 6;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_RETRIEVE_MEMORY = 7;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_CUSTOM_TOOL = 8;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_AUTO_CASCADE = 9;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_AUTO_CASCADE_MANAGER = 10;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_APPLIER = 11;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_TOOL_CALL_PROPOSAL = 12;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_TRAJECTORY_CHOICE = 13;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_LLM_JUDGE = 14;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_ARTIFACT_SUMMARY = 19;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_PASSIVE_CODER = 15;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_INTERACTIVE_CASCADE = 17;
+  ExaCortexPb_CortexTrajectoryType_CORTEX_TRAJECTORY_TYPE_BRAIN_UPDATE = 16;
+}
+
+enum ExaCortexPb_CortexStepType {
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_UNSPECIFIED = 0;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_DUMMY = 1;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_FINISH = 2;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_PLAN_INPUT = 3;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_MQUERY = 4;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_CODE_ACTION = 5;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_GIT_COMMIT = 6;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_GREP_SEARCH = 7;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_VIEW_FILE = 8;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_LIST_DIRECTORY = 9;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_COMPILE = 10;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_INFORM = 11;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_FILE_BREAKDOWN = 12;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_VIEW_CODE_ITEM = 13;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_USER_INPUT = 14;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_PLANNER_RESPONSE = 15;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_WRITE_TO_FILE = 16;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_ERROR_MESSAGE = 17;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_CLUSTER_QUERY = 18;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_LIST_CLUSTERS = 19;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_INSPECT_CLUSTER = 20;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_RUN_COMMAND = 21;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_RELATED_FILES = 22;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_CHECKPOINT = 23;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_PROPOSE_CODE = 24;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_FIND = 25;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SEARCH_KNOWLEDGE_BASE = 26;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SUGGESTED_RESPONSES = 27;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_COMMAND_STATUS = 28;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_MEMORY = 29;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_LOOKUP_KNOWLEDGE_BASE = 30;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_READ_URL_CONTENT = 31;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_VIEW_CONTENT_CHUNK = 32;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SEARCH_WEB = 33;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_RETRIEVE_MEMORY = 34;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_AUTO_CASCADE_BROADCAST = 35;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_CUSTOM_TOOL = 36;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_CREATE_RECIPE = 37;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_MCP_TOOL = 38;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_MANAGER_FEEDBACK = 39;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_TOOL_CALL_PROPOSAL = 40;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_TOOL_CALL_CHOICE = 41;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_TRAJECTORY_CHOICE = 42;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_PROXY_WEB_SERVER = 43;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_DEPLOY_WEB_APP = 44;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_CLIPBOARD = 45;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_READ_DEPLOYMENT_CONFIG = 46;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_VIEW_FILE_OUTLINE = 47;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_CHECK_DEPLOY_STATUS = 48;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_POST_PR_REVIEW = 49;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_READ_KNOWLEDGE_BASE_ITEM = 50;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_LIST_RESOURCES = 51;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_READ_RESOURCE = 52;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_LINT_DIFF = 53;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_FIND_ALL_REFERENCES = 54;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_BRAIN_UPDATE = 55;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_RUN_EXTENSION_CODE = 57;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_ADD_ANNOTATION = 58;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_PROPOSAL_FEEDBACK = 59;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_TRAJECTORY_SEARCH = 60;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_READ_TERMINAL = 65;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_GET_DOM_TREE = 68;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_ARTIFACT_SUMMARY = 71;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_RESOLVE_TASK = 72;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_TODO_LIST = 73;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_BLOCKING = 74;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_EXPLORE_RESPONSE = 80;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_READ_NOTEBOOK = 82;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_EDIT_NOTEBOOK = 83;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SUPERCOMPLETE_ACTIVE_DOC = 86;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_FIND_CODE_CONTEXT = 87;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SUPERCOMPLETE_FEEDBACK = 89;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_LINT_FIX_MESSAGE = 90;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_GREP_SEARCH_V2 = 91;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_UPSERT_CODEMAP = 92;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SUGGEST_CODEMAP = 93;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SMART_FRIEND = 94;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_DO_TESTING = 95;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_REPORT_BUGS = 97;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_EXIT_PLAN_MODE = 99;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_ASK_USER_QUESTION = 100;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SKILL = 101;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_SUPERCOMPLETE_EPHEMERAL_FEEDBACK = 102;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_ARENA_TRAJECTORY_CONVERGE = 103;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_TASK_SUBAGENT = 104;
+  ExaCortexPb_CortexStepType_CORTEX_STEP_TYPE_LIST_MEMORIES = 105;
+}
+
+message GetChatMessageRequest {
+  optional ExaCodeiumCommonPb_Metadata metadata = 1;
+  optional string prompt = 2;
+  repeated ExaChatPb_ChatMessagePrompt chat_message_prompts = 3;
+  optional string chat_model_uid = 21;
+  optional ChatMessageRequestType request_type = 7;
+  optional ExaCodeiumCommonPb_CompletionConfiguration configuration = 8;
+  repeated ExaChatPb_ChatToolDefinition tools = 10;
+  optional bool disable_parallel_tool_calls = 11;
+  optional ExaChatPb_ChatToolChoice tool_choice = 12;
+  optional ExaCortexPb_CortexTrajectoryReference trajectory_reference = 15;
+  optional string cascade_id = 16;
+  optional ExaCodeiumCommonPb_ConversationalPlannerMode planner_mode = 20;
+  optional string execution_id = 22;
+}
+
+message GetChatMessageResponse {
+  optional string message_id = 1;
+  optional string delta_text = 3;
+  optional ExaCodeiumCommonPb_StopReason stop_reason = 5;
+  repeated ExaCodeiumCommonPb_ChatToolCall delta_tool_calls = 6;
+  optional ExaCodeiumCommonPb_ModelUsageStats usage = 7;
+  optional string delta_thinking = 9;
+  optional string delta_signature = 10;
+  optional bool thinking_redacted = 11;
+  optional string actual_model_uid = 23;
+}
+
+message GetCascadeModelConfigsRequest {
+  optional ExaCodeiumCommonPb_Metadata metadata = 1;
+}
+
+message GetCascadeModelConfigsResponse {
+  repeated ExaCodeiumCommonPb_ClientModelConfig client_model_configs = 1;
+}
+
+message ExaChatPb_ChatMessagePrompt {
+  optional string message_id = 1;
+  optional ExaCodeiumCommonPb_ChatMessageSource source = 2;
+  optional string prompt = 3;
+  repeated ExaCodeiumCommonPb_ChatToolCall tool_calls = 6;
+  optional string tool_call_id = 7;
+  optional bool tool_result_is_error = 9;
+  repeated ExaCodeiumCommonPb_ImageData images = 10;
+}
+
+message ExaChatPb_ChatToolDefinition {
+  optional string name = 1;
+  optional string description = 2;
+  optional string json_schema_string = 3;
+}
+
+message ExaChatPb_ChatToolChoice {
+  oneof choice {
+    string option_name = 1;
+    string tool_name = 2;
+  }
+}
+
+message ExaCodeiumCommonPb_CompletionConfiguration {
+  optional uint64 num_completions = 1;
+  optional uint64 max_tokens = 2;
+  optional uint64 max_newlines = 3;
+  optional double temperature = 5;
+  optional uint64 top_k = 7;
+  optional double top_p = 8;
+}
+
+message ExaCodeiumCommonPb_ModelOrAlias {
+  oneof choice {
+    string model_uid = 3;
+  }
+}
+
+message ExaCodeiumCommonPb_Metadata {
+  optional string ide_name = 1;
+  optional string ide_version = 7;
+  optional string extension_name = 12;
+  optional string extension_version = 2;
+  optional string api_key = 3;
+  optional string locale = 4;
+  optional string os = 5;
+  optional string f = 31;
+}
+
+message ExaCodeiumCommonPb_ClientModelConfig {
+  optional string label = 1;
+  optional ExaCodeiumCommonPb_ModelOrAlias model_or_alias = 2;
+  optional string model_uid = 22;
+  optional bool disabled = 4;
+  optional bool supports_images = 5;
+  optional ExaCodeiumCommonPb_ModelProvider provider = 10;
+  optional int32 max_tokens = 18;
+}
+
+message ExaCodeiumCommonPb_ChatToolCall {
+  optional string id = 1;
+  optional string name = 2;
+  optional string arguments_json = 3;
+}
+
+message ExaCodeiumCommonPb_ModelUsageStats {
+  optional string model_uid = 9;
+  optional uint64 input_tokens = 2;
+  optional uint64 output_tokens = 3;
+  optional uint64 cache_write_tokens = 4;
+  optional uint64 cache_read_tokens = 5;
+}
+
+message ExaCodeiumCommonPb_ImageData {
+  optional string base64_data = 1;
+  optional string mime_type = 2;
+}
+
+message ExaCortexPb_CortexTrajectoryReference {
+  optional string trajectory_id = 1;
+  optional ExaCortexPb_CortexTrajectoryType trajectory_type = 3;
+  optional ExaCortexPb_CortexStepType step_type = 4;
+}

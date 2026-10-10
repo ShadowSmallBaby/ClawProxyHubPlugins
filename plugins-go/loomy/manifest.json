@@ -1,0 +1,11 @@
+{
+  "name": "loomy",
+  "version": "0.1.3",
+  "author": "cph",
+  "label": {
+    "zh": "Loomy",
+    "en": "Loomy"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}

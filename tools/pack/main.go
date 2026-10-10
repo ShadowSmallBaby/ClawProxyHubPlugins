@@ -2,13 +2,13 @@
 //
 // 用法：
 //
-//	go run ./tools/pack                                   # 全部插件 → dist/
+//	go run ./tools/pack                                   # 全部插件 → build/
 //	go run ./tools/pack -only lobsterai                   # 只打包指定插件
 //	go run ./tools/pack -skip lobsterai                   # 跳过已发布版本，索引条目沿用现有 index.json（缺条目则从 Release 资产恢复）
 //	go run ./tools/pack -install ../ClawProxyHub/data/plugins   # 本地开发：编译当前平台并装入核心插件目录
 //
 // 包格式（zip）：manifest.json + 图标 + plugin-<os>-<arch>[.exe]（多平台）。
-// 版本号唯一来源是 plugins/<name>/manifest.json，经 -ldflags 注入二进制（Handshake 回报同一值）；
+// 版本号唯一来源是 plugins-go/<name>/manifest.json，经 -ldflags 注入二进制（Handshake 回报同一值）；
 // protocol_version 取自编译所用 SDK，保证包声明与二进制实际握手版本一致。
 package main
 
@@ -47,7 +47,7 @@ var platforms = [][2]string{
 var zipTime = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // manifest 插件清单：源文件 <root>/<name>/manifest.json + 打包时补齐 protocol_version。
-// runtime=="lua" 的脚本插件保留声明的 protocol_version（不被 SDK 覆盖），并带 entry。
+// runtime=="lua" 的脚本插件带 entry，与 Go 插件使用同一 SDK 协议版本。
 type manifest struct {
 	Name            string            `json:"name"`
 	Version         string            `json:"version"`
@@ -61,23 +61,26 @@ type manifest struct {
 
 // indexEntry 市场 index.json 单条目（字段与核心 MarketEntry 对齐）。
 type indexEntry struct {
-	Name        string            `json:"name"`
-	Version     string            `json:"version"`
-	Author      string            `json:"author,omitempty"`
-	Runtime     string            `json:"runtime,omitempty"` // lua 等脚本插件；空=Go 插件
-	Label       map[string]string `json:"label"`
-	PublishedAt string            `json:"published_at,omitempty"`
-	DownloadURL string            `json:"download_url"`
-	SHA256      string            `json:"sha256"`
+	Name            string              `json:"name"`
+	Version         string              `json:"version"`
+	Author          string              `json:"author,omitempty"`
+	Runtime         string              `json:"runtime,omitempty"` // lua 等脚本插件；空=Go 插件
+	Label           map[string]string   `json:"label"`
+	PublishedAt     string              `json:"published_at,omitempty"`
+	DownloadURL     string              `json:"download_url"`
+	SHA256          string              `json:"sha256"`
+	Platforms       map[string][]string `json:"platforms,omitempty"`
+	ReleaseManifest json.RawMessage     `json:"release_manifest,omitempty"`
+	ProtocolVersion int32               `json:"protocol_version,omitempty"`
 }
 
 func main() {
-	out := flag.String("out", "dist", "包与 index.json 的输出目录")
+	out := flag.String("out", "build", "包与 index.json 的输出目录")
 	baseURL := flag.String("base-url", defaultBaseURL, "下载地址前缀：<base-url>/<name>-v<version>/<name>-<version>.cphplugin")
 	indexPath := flag.String("index", "index.json", "现有索引路径（-skip 的插件从这里沿用条目）")
 	only := flag.String("only", "", "只处理这些插件（逗号分隔）")
 	skip := flag.String("skip", "", "跳过这些插件的构建（逗号分隔，通常是已发布版本）")
-	install := flag.String("install", "", "开发模式：只编译当前平台并安装到该插件目录（不打包、不生成索引）")
+	install := flag.String("install", "", "开发模式：安装当前平台插件或 Lua 脚本（不打包、不生成索引）")
 	flag.Parse()
 
 	if err := run(*out, *baseURL, *indexPath, csv(*only), csv(*skip), *install); err != nil {
@@ -142,8 +145,8 @@ func run(out, baseURL, indexPath string, only, skip map[string]bool, install str
 	return nil
 }
 
-// pluginRoots 扫描的插件根：Go 插件在 plugins/，Lua 等脚本插件在 plugins-lua/。
-var pluginRoots = []string{"plugins", "plugins-lua"}
+// pluginRoots 扫描的插件根：Go 插件在 plugins-go/，Lua 等脚本插件在 plugins-lua/。
+var pluginRoots = []string{"plugins-go", "plugins-lua"}
 
 // pluginRoot 定位插件所在根目录（插件名全局唯一，找不到默认 plugins）。
 func pluginRoot(name string) string {
@@ -152,10 +155,10 @@ func pluginRoot(name string) string {
 			return root
 		}
 	}
-	return "plugins"
+	return "plugins-go"
 }
 
-// discover 列出 plugins/ 与 plugins-lua/ 下带 manifest.json 的插件（-only 过滤）。
+// discover 列出 plugins-go/ 与 plugins-lua/ 下带 manifest.json 的插件（-only 过滤）。
 func discover(only map[string]bool) ([]string, error) {
 	var names []string
 	for _, root := range pluginRoots {
@@ -178,7 +181,7 @@ func discover(only map[string]bool) ([]string, error) {
 	}
 	for n := range only {
 		if !contains(names, n) {
-			return nil, fmt.Errorf("plugin %q not found (need plugins/%s or plugins-lua/%s manifest.json)", n, n, n)
+			return nil, fmt.Errorf("plugin %q not found (need plugins-go/%s or plugins-lua/%s manifest.json)", n, n, n)
 		}
 	}
 	if len(names) == 0 {
@@ -272,8 +275,7 @@ func restoreFromRelease(name, baseURL string) (indexEntry, error) {
 	}, nil
 }
 
-// installDev 开发安装：当前平台二进制 + manifest + 图标 → <dir>/<name>/（与核心目录约定一致）。
-// lua 插件注入本地编译的 luahost 作为 plugin-<os>-<arch>，脚本原样落地。
+// installDev 安装当前平台二进制或 Lua 脚本、清单和图标；Lua 由宿主提供的运行时执行。
 func installDev(name, dir string) error {
 	mf, err := loadManifest(name)
 	if err != nil {
@@ -286,18 +288,17 @@ func installDev(name, dir string) error {
 	root := filepath.Join(pluginRoot(name), name)
 	bin := filepath.Join(target, binaryName(runtime.GOOS, runtime.GOARCH))
 	if mf.Runtime == "lua" {
-		if err := buildLuahost(bin); err != nil {
-			return fmt.Errorf("%s: build luahost: %w（核心运行中会锁住二进制，先在插件页停止该插件）", name, err)
-		}
-		if err := copyFile(filepath.Join(root, "main.lua"), filepath.Join(target, "main.lua")); err != nil {
+		files := make(map[string]string)
+		if err := collectLuaFiles(name, files); err != nil {
 			return err
 		}
-		if libs, err := os.ReadDir(filepath.Join(root, "lib")); err == nil {
-			_ = os.MkdirAll(filepath.Join(target, "lib"), 0o755)
-			for _, e := range libs {
-				if !e.IsDir() && strings.HasSuffix(e.Name(), ".lua") {
-					_ = copyFile(filepath.Join(root, "lib", e.Name()), filepath.Join(target, "lib", e.Name()))
-				}
+		for relative, source := range files {
+			destination := filepath.Join(target, relative)
+			if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+				return err
+			}
+			if err := copyFile(source, destination); err != nil {
+				return err
 			}
 		}
 	} else if err := goBuild(name, mf.Version, runtime.GOOS, runtime.GOARCH, bin); err != nil {
@@ -311,7 +312,7 @@ func installDev(name, dir string) error {
 			return err
 		}
 	}
-	fmt.Printf("installed %s v%s -> %s\n", name, mf.Version, bin)
+	fmt.Printf("installed %s v%s -> %s\n", name, mf.Version, target)
 	return nil
 }
 
@@ -366,34 +367,30 @@ func collectLuaFiles(name string, files map[string]string) error {
 		return fmt.Errorf("lua plugin missing main.lua: %w", err)
 	}
 	files["main.lua"] = entry
-	if libs, err := os.ReadDir(filepath.Join(root, "lib")); err == nil {
-		for _, e := range libs {
-			if !e.IsDir() && strings.HasSuffix(e.Name(), ".lua") {
-				files["lib/"+e.Name()] = filepath.Join(root, "lib", e.Name())
-			}
+	libs, err := os.ReadDir(filepath.Join(root, "lib"))
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("read lua libraries: %w", err)
+	}
+	for _, e := range libs {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".lua") {
+			files["lib/"+e.Name()] = filepath.Join(root, "lib", e.Name())
 		}
 	}
 	return nil
 }
 
-// buildLuahost 编译主仓 hosts/luahost（当前平台，纯 Go）到 out；pack 在插件仓根运行，主仓在 ../。
-func buildLuahost(out string) error {
-	abs, err := filepath.Abs(out)
-	if err != nil {
-		return err
-	}
-	cmd := exec.Command("go", "build", "-trimpath", "-ldflags", "-s -w", "-o", abs, ".")
-	cmd.Dir = filepath.Join("..", "hosts", "luahost")
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	return cmd.Run()
-}
-
 // goBuild 交叉编译单个插件；CGO 关闭 + trimpath 保证产物可复现。
 func goBuild(name, version, goos, goarch, out string) error {
+	entry := filepath.Join(pluginRoot(name), name)
+	// 跨平台插件将桌面入口放在 cmd，旧插件继续从根包构建。
+	if info, err := os.Stat(filepath.Join(entry, "cmd")); err == nil && info.IsDir() {
+		entry = filepath.Join(entry, "cmd")
+	} else if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("locate desktop entry: %w", err)
+	}
 	cmd := exec.Command("go", "build", "-trimpath",
 		"-ldflags", "-s -w -X main.version="+version,
-		"-o", out, "./"+pluginRoot(name)+"/"+name)
+		"-o", out, "./"+filepath.ToSlash(entry))
 	cmd.Env = append(os.Environ(), "GOOS="+goos, "GOARCH="+goarch, "CGO_ENABLED=0")
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {

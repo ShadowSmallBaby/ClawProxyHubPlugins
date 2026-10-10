@@ -1,0 +1,39 @@
+import java.security.KeyStore
+
+// 正式插件独立读取发行密钥；本地调试沿用 Android 标准 debug keystore。
+def releaseSigning = providers.gradleProperty('cphReleaseSigning').map { it.toBoolean() }.getOrElse(false)
+def debugDirectory = System.getenv('ANDROID_USER_HOME') ? file(System.getenv('ANDROID_USER_HOME')) : new File(System.getProperty('user.home'), '.android')
+def keystore = System.getenv('CPH_ANDROID_KEYSTORE')
+ext.cphPluginSigning = releaseSigning ? [
+    storeFile: keystore ? file(keystore) : null,
+    storePassword: System.getenv('CPH_ANDROID_STORE_PASSWORD'),
+    keyAlias: System.getenv('CPH_ANDROID_KEY_ALIAS'),
+    keyPassword: System.getenv('CPH_ANDROID_KEY_PASSWORD')
+] : [storeFile: new File(debugDirectory, 'debug.keystore'), storePassword: 'android', keyAlias: 'androiddebugkey', keyPassword: 'android']
+def signing = ext.cphPluginSigning
+
+tasks.register('preparePluginSigning') {
+    doLast {
+        if (releaseSigning) {
+            ['CPH_ANDROID_KEYSTORE', 'CPH_ANDROID_STORE_PASSWORD', 'CPH_ANDROID_KEY_ALIAS', 'CPH_ANDROID_KEY_PASSWORD'].each {
+                if (!System.getenv(it)) throw new GradleException("Missing release signing configuration: ${it}")
+            }
+            if (!signing.storeFile.isFile()) throw new GradleException("Release keystore missing: ${signing.storeFile}")
+        } else if (!signing.storeFile.isFile()) {
+            signing.storeFile.parentFile.mkdirs()
+            def suffix = System.getProperty('os.name').toLowerCase().contains('windows') ? '.exe' : ''
+            providers.exec {
+                environment 'CPH_PLUGIN_STORE_PASSWORD', signing.storePassword
+                environment 'CPH_PLUGIN_KEY_PASSWORD', signing.keyPassword
+                commandLine new File(System.getProperty('java.home'), 'bin/keytool' + suffix), '-genkeypair',
+                    '-keystore', signing.storeFile, '-storepass:env', 'CPH_PLUGIN_STORE_PASSWORD',
+                    '-keypass:env', 'CPH_PLUGIN_KEY_PASSWORD', '-alias', signing.keyAlias,
+                    '-keyalg', 'RSA', '-keysize', '2048', '-validity', '10000', '-dname', 'CN=Android Debug,O=Android,C=US'
+            }.result.get().assertNormalExitValue()
+        }
+        def keys = KeyStore.getInstance(signing.storeFile, signing.storePassword.toCharArray())
+        if (keys.getKey(signing.keyAlias, signing.keyPassword.toCharArray())?.algorithm != 'RSA') {
+            throw new GradleException('Native plugins require an RSA signing key')
+        }
+    }
+}

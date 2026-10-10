@@ -1,0 +1,18 @@
+rootProject.name = 'ClawProxyHubPlugins'
+
+// 每个业务工厂共用同一构建脚本，生成文件只进入忽略的 build 目录。
+def selected = providers.gradleProperty('cphPlugins').getOrElse('all')
+def pluginRoot = new File(settingsDir.parentFile, 'plugins-go')
+def names = selected == 'all' ? pluginRoot.listFiles().findAll { it.isDirectory() && new File(it, 'manifest.json').isFile() }.collect { it.name } : selected.split(',').collect { it.trim() }.findAll { it }
+if (names.isEmpty()) throw new GradleException('Select at least one plugin with -PcphPlugins=<name,...> or all')
+names.unique().sort().each { name ->
+    if (!(name ==~ /[a-z][a-z0-9_]{0,63}/) || !new File(pluginRoot, "${name}/cmd/main.go").isFile() || !new File(pluginRoot, "${name}/manifest.json").isFile()) {
+        throw new GradleException("Plugin has no shared business factory: ${name}")
+    }
+    def id = ":business-${name}"
+    include id
+    def directory = new File(settingsDir.parentFile, "build/android/business-projects/${name}")
+    directory.mkdirs()
+    project(id).projectDir = directory
+    project(id).buildFileName = directory.toPath().relativize(new File(settingsDir, 'business-plugin.gradle').toPath()).toString()
+}

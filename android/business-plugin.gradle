@@ -1,0 +1,66 @@
+plugins { id 'base' }
+import groovy.json.JsonOutput
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.security.Signature
+
+def pluginName = project.name.substring('business-'.length())
+def manifestFile = rootProject.file("../plugins-go/${pluginName}/manifest.json")
+def pluginManifest = new groovy.json.JsonSlurper().parse(manifestFile)
+if (pluginManifest.name != pluginName) throw new GradleException('Plugin name must match directory')
+def abi = providers.gradleProperty('cphABI').getOrElse('arm64-v8a')
+def goArch = abi == 'x86_64' ? 'amd64' : 'arm64'
+def templateDir = rootProject.file('plugin-template')
+def generated = layout.buildDirectory.dir('generated/native')
+def payload = layout.buildDirectory.dir('package')
+def generateEntry = tasks.register('generatePluginEntry') {
+    inputs.dir templateDir
+    inputs.property 'pluginName', pluginName
+    outputs.dir generated
+    doLast {
+        def output = generated.get().asFile; output.mkdirs()
+        new File(output, 'main_android.go').text = new File(templateDir, 'main_android.go.tmpl').text.replace('@PLUGIN@', pluginName)
+        new File(output, 'bridge_android.c').bytes = new File(templateDir, 'bridge_android.c').bytes
+    }
+}
+ext.cphNativeSource = './' + rootProject.projectDir.parentFile.toPath().relativize(generated.get().asFile.toPath()).toString().replace('\\', '/')
+ext.cphPluginVersion = pluginManifest.version
+apply from: rootProject.file('native.gradle')
+tasks.named('buildGoNative').configure { dependsOn generateEntry }
+def signing = rootProject.ext.cphPluginSigning
+// 正式插件与主应用使用同一稳定发行证书；未配置密钥时拒绝生成正式包。
+def packagePayload = tasks.register('preparePluginPackage') {
+    dependsOn 'buildGoNative', ':preparePluginSigning'
+    doLast {
+        def directory = payload.get().asFile
+        delete directory
+        directory.mkdirs()
+        def libraryPath = "lib/${abi}/libcphplugin.so"
+        def library = new File(directory, libraryPath); library.parentFile.mkdirs()
+        library.bytes = layout.buildDirectory.file("generated/jniLibs/${abi}/libcphplugin.so").get().asFile.bytes
+        def files = [(libraryPath): MessageDigest.getInstance('SHA-256').digest(library.bytes).encodeHex().toString()]
+        if (pluginManifest.icon) {
+            def icon = new File(directory, pluginManifest.icon); icon.parentFile.mkdirs()
+            icon.bytes = new File(manifestFile.parentFile, pluginManifest.icon).bytes
+            files[pluginManifest.icon] = MessageDigest.getInstance('SHA-256').digest(icon.bytes).encodeHex().toString()
+        }
+        def metadata = new LinkedHashMap(pluginManifest)
+        metadata.runtime = 'go'
+        metadata.protocol_version = 2
+        metadata.android = [format:'cph-native-v1', library:libraryPath, abi:abi, min_sdk:24, files:files]
+        def raw = (JsonOutput.prettyPrint(JsonOutput.toJson(metadata)) + '\n').getBytes('UTF-8')
+        new File(directory, 'manifest.json').bytes = raw
+        def keys = KeyStore.getInstance(signing.storeFile, signing.storePassword.toCharArray())
+        def signer = Signature.getInstance('SHA256withRSA')
+        signer.initSign(keys.getKey(signing.keyAlias, signing.keyPassword.toCharArray())); signer.update(raw)
+        new File(directory, 'signature.json').text = JsonOutput.toJson([algorithm:'SHA256withRSA', certificate:keys.getCertificate(signing.keyAlias).encoded.encodeBase64().toString(), value:signer.sign().encodeBase64().toString()])
+    }
+}
+tasks.register('packageCphPlugin', Zip) {
+    dependsOn packagePayload
+    destinationDirectory = rootProject.layout.buildDirectory.dir('plugin-packages')
+    archiveFileName = "${pluginName}-${pluginManifest.version}-android-${goArch}.cphplugin"
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    from payload
+}

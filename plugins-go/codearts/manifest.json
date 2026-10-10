@@ -1,0 +1,11 @@
+{
+  "name": "codearts",
+  "version": "0.1.2",
+  "author": "cph",
+  "label": {
+    "zh": "CodeArts",
+    "en": "CodeArts"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}

@@ -1,0 +1,30 @@
+// 原生插件只构建子库 Go module，SDK 由 go.mod 决定。
+def abi = providers.gradleProperty('cphABI').getOrElse('arm64-v8a')
+def targets = ['arm64-v8a': ['arm64', 'aarch64-linux-android24'], 'x86_64': ['amd64', 'x86_64-linux-android24']]
+if (!targets.containsKey(abi)) throw new GradleException("Unsupported Android ABI: ${abi}")
+def nativeOutput = layout.buildDirectory.file("generated/jniLibs/${abi}/libcphplugin.so")
+
+tasks.register('buildGoNative', Exec) {
+    dependsOn ':checkAndroidSdk'
+    mustRunAfter ':preparePluginSigning'
+    workingDir rootProject.file('..')
+    doFirst {
+        def os = System.getProperty('os.name').toLowerCase()
+        def host = os.contains('windows') ? 'windows-x86_64' : (os.contains('mac') ? 'darwin-x86_64' : 'linux-x86_64')
+        def suffix = os.contains('windows') ? '.exe' : ''
+        def sdk = System.getenv('ANDROID_HOME') ?: System.getenv('ANDROID_SDK_ROOT')
+        if (!sdk) throw new GradleException('Set ANDROID_HOME or ANDROID_SDK_ROOT to the Android SDK directory')
+        def clang = new File(sdk, "ndk/28.2.13676358/toolchains/llvm/prebuilt/${host}/bin/clang${suffix}")
+        if (!clang.isFile()) throw new GradleException("NDK compiler missing: ${clang}")
+        nativeOutput.get().asFile.parentFile.mkdirs()
+        environment 'GOWORK', 'off'
+        environment 'GOOS', 'android'
+        environment 'GOARCH', targets[abi][0]
+        environment 'CGO_ENABLED', '1'
+        environment 'CC', '"' + clang.absolutePath.replace('\\', '/') + '" --target=' + targets[abi][1]
+        environment 'CGO_LDFLAGS', '-Wl,-z,max-page-size=16384'
+        commandLine 'go', 'build', '-mod=readonly', '-trimpath', '-buildmode=c-shared',
+            "-ldflags=-s -w -X main.version=${project.ext.cphPluginVersion}",
+            '-o', nativeOutput.get().asFile.absolutePath, project.ext.cphNativeSource
+    }
+}

@@ -3,7 +3,7 @@ module github.com/ShadowSmallBaby/ClawProxyHubPlugins
 go 1.26.2
 
 require (
-	github.com/ShadowSmallBaby/ClawProxyHub v1.5.2
+	github.com/ShadowSmallBaby/ClawProxyHub v1.5.3-0.20261010045129-6805f658f819
 	github.com/gorilla/websocket v1.5.3
 	github.com/warpdotdev/warp-proto-apis/apis/multi_agent v0.0.0-20260917164411-f5c1878026bc
 	golang.org/x/crypto v0.57.0

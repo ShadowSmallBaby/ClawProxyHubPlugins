@@ -6,6 +6,15 @@ on:
     paths-ignore: ["index.json", "README.md", "AGENTS.md", "LICENSE"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_checks:
+        description: "运行 Go 静态检查、单元测试及发布脚本测试"
+        type: boolean
+        default: false
+      publish:
+        description: "发布 Release 并更新市场索引（仅 main）"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -24,14 +33,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check publication target
+        if: github.event_name == 'workflow_dispatch' && inputs.publish == true && github.ref != 'refs/heads/main'
+        run: |
+          echo 'Publication is only available from main.' >&2
+          exit 1
+
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
 
       - name: Vet & test
+        if: github.event_name == 'pull_request' || inputs.run_checks == true
         run: |
           go vet ./...
           go test ./...
+          python3 -m unittest discover -s tools -p '*_test.py'
 
       # 已发布版本不可变：跳过重建，索引条目沿用仓库里的 index.json
       - name: Resolve released versions
@@ -40,7 +57,7 @@ jobs:
         run: |
           shopt -s nullglob
           skip=""
-          for mf in plugins/*/manifest.json plugins-lua/*/manifest.json; do
+          for mf in plugins-go/*/manifest.json plugins-lua/*/manifest.json; do
             name=$(jq -r .name "$mf"); version=$(jq -r .version "$mf")
             if gh release view "${name}-v${version}" >/dev/null 2>&1; then
               skip="${skip:+$skip,}$name"
@@ -50,40 +67,107 @@ jobs:
           echo "already released: ${skip:-none}"
 
       - name: Pack
-        run: go run ./tools/pack -out dist -base-url "$BASE_URL" -skip "${{ steps.released.outputs.skip }}"
+        run: go run ./tools/pack -out build -base-url "$BASE_URL" -skip "${{ steps.released.outputs.skip }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: plugins
-          path: dist/
+          path: build/
 
-      # 每个插件版本一个 Release：tag = <name>-v<version>，资产 = <name>-<version>.cphplugin
-      - name: Release new versions
-        if: github.event_name != 'pull_request'
-        run: |
-          jq -r '.[] | "\(.name) \(.version) \(.sha256)"' dist/index.json | while read -r name version sha; do
-            tag="${name}-v${version}"; pkg="dist/${name}-${version}.cphplugin"
-            if gh release view "$tag" >/dev/null 2>&1; then
-              echo "exists: $tag"; continue
-            fi
-            [ -f "$pkg" ] || { echo "missing package $pkg"; exit 1; }
-            gh release create "$tag" "$pkg" --target "$GITHUB_SHA" \
-              --title "$name v$version" --notes "sha256: \`$sha\`"
-            echo "released: $tag"
-          done
 
-      # 市场索引回写到 main（核心默认从 raw.githubusercontent.com/<repo>/main/index.json 读取）
-      - name: Commit index.json
-        if: github.event_name != 'pull_request'
+  android:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Check pinned Android SDK
+        run: sh android/gradlew -p android checkAndroidSdk
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - name: Install Android toolchain
+        run: sdkmanager 'ndk;28.2.13676358'
+      - name: Prepare official signing identity
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        env:
+          CPH_ANDROID_KEYSTORE_BASE64: ${{ secrets.CPH_ANDROID_KEYSTORE_BASE64 }}
+          CPH_ANDROID_STORE_PASSWORD: ${{ secrets.CPH_ANDROID_STORE_PASSWORD }}
+          CPH_ANDROID_KEY_ALIAS: ${{ secrets.CPH_ANDROID_KEY_ALIAS }}
+          CPH_ANDROID_KEY_PASSWORD: ${{ secrets.CPH_ANDROID_KEY_PASSWORD }}
+        run: python3 android/prepare_signing.py
+      - name: Reuse immutable published Android packages
+        id: released
+        if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          ABI: ${{ matrix.abi }}
+        run: python3 tools/android_release.py plan --repo "$REPOSITORY" --abi "$ABI" --packages build/android/plugin-packages
+      - name: Build Android native packages
+        env:
+          ABI: ${{ matrix.abi }}
+          NAMES: ${{ steps.released.outputs.names }}
+          OFFICIAL: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+          CPH_ANDROID_STORE_PASSWORD: ${{ secrets.CPH_ANDROID_STORE_PASSWORD }}
+          CPH_ANDROID_KEY_ALIAS: ${{ secrets.CPH_ANDROID_KEY_ALIAS }}
+          CPH_ANDROID_KEY_PASSWORD: ${{ secrets.CPH_ANDROID_KEY_PASSWORD }}
         run: |
-          if cmp -s dist/index.json index.json; then
-            echo "index unchanged"; exit 0
+          if [ "$OFFICIAL" != true ]; then NAMES=all; fi
+          if [ -n "$NAMES" ]; then
+            sh android/gradlew -p android -PcphABI="$ABI" -PcphPlugins="$NAMES" -PcphReleaseSigning="$OFFICIAL" packageCphPlugin
           fi
+          python3 android/verify_packages.py build/android/plugin-packages ${CPH_ANDROID_CERTIFICATE_SHA256:+--certificate-sha256 "$CPH_ANDROID_CERTIFICATE_SHA256"} --output build/android/verification.json
+      - name: Remove signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/cph-release-signing.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-plugins-${{ matrix.abi }}
+          path: build/android/plugin-packages/*.cphplugin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-verification-${{ matrix.abi }}
+          path: build/android/verification.json
+
+  publish:
+    needs: [build, android]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish == true))
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugins
+          path: build
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: android-plugins-*
+          merge-multiple: true
+          path: build
+      - name: Publish immutable desktop and Android packages
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: python3 tools/android_release.py publish --repo "$REPOSITORY" --packages build --index build/index.json
+      - name: Commit marketplace index
+        run: |
           git fetch origin main
           git checkout -B main origin/main
-          cp dist/index.json index.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp build/index.json index.json
           git add index.json
-          git commit -m "chore: update marketplace index [skip ci]"
+          if git diff --cached --quiet; then echo 'indexes unchanged'; exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: update marketplace index [skip ci]'
           git push origin main

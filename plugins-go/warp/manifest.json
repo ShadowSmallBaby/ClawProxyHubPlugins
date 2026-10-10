@@ -1,0 +1,11 @@
+{
+  "name": "warp",
+  "version": "0.1.1",
+  "author": "cph",
+  "label": {
+    "zh": "Warp",
+    "en": "Warp"
+  },
+  "icon": "icon.png",
+  "protocol_version": 2
+}
