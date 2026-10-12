@@ -103,26 +103,57 @@ var runtimeBlockReplacements = []struct{ open, close, replacement string }{
 
 // desensitizeMessageBody 对 openai body（map 形态）的 system/developer 消息净化，
 // 并替换消息里的运行时上下文块。user 消息仅做块替换（不动真实提问内容）。
+// messages 载体兼容两种：ChatBody 原生构造的 []map[string]interface{} 与
+// JSON 反序列化的 []interface{}——此前只断言后者（Go 中两者类型不兼容），
+// 净化在聊天链路从未执行过，客户端特征签名原样外发触发上游 11128。
+// content 兼容字符串与 parts 数组（[]map / []interface）形态。
 func desensitizeMessageBody(body map[string]interface{}) {
-	messages, ok := body["messages"].([]interface{})
-	if !ok {
-		return
+	switch messages := body["messages"].(type) {
+	case []map[string]interface{}:
+		for _, msg := range messages {
+			sanitizeMessage(msg)
+		}
+	case []interface{}:
+		for _, mi := range messages {
+			if msg, ok := mi.(map[string]interface{}); ok {
+				sanitizeMessage(msg)
+			}
+		}
 	}
-	for _, mi := range messages {
-		msg, ok := mi.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		role, _ := msg["role"].(string)
-		content, ok := msg["content"].(string)
-		if !ok {
-			continue
-		}
-		if role == "system" || role == "developer" {
+}
+
+func sanitizeMessage(msg map[string]interface{}) {
+	role, _ := msg["role"].(string)
+	sanitize := role == "system" || role == "developer"
+	switch content := msg["content"].(type) {
+	case string:
+		if sanitize {
 			msg["content"] = desensitizeText(replaceRuntimeBlocks(content))
 		} else {
 			msg["content"] = replaceRuntimeBlocks(content)
 		}
+	case []map[string]interface{}:
+		for _, part := range content {
+			sanitizePart(part, sanitize)
+		}
+	case []interface{}:
+		for _, pi := range content {
+			if part, ok := pi.(map[string]interface{}); ok {
+				sanitizePart(part, sanitize)
+			}
+		}
+	}
+}
+
+func sanitizePart(part map[string]interface{}, sanitize bool) {
+	txt, ok := part["text"].(string)
+	if !ok {
+		return
+	}
+	if sanitize {
+		part["text"] = desensitizeText(replaceRuntimeBlocks(txt))
+	} else {
+		part["text"] = replaceRuntimeBlocks(txt)
 	}
 }
 
