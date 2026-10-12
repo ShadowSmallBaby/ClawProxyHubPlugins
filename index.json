@@ -94,11 +94,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cnb-v0.1.0/cnb-0.1.0.cphplugin",
     "sha256": "5e8e9800b0cffa420441f30323bc2ec888d5c9630ff3dbded79fe3bd4c0a5abc",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cnb-v0.1.0/manifest.json",
-      "sha256": "5d7000c0091101ba5d8062b7be44f5d5cc90173d9011202fd689c0a8454f5ed3"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -114,7 +109,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/cnb-v0.1.0/manifest.json",
+      "sha256": "5d7000c0091101ba5d8062b7be44f5d5cc90173d9011202fd689c0a8454f5ed3"
+    },
+    "protocol_version": 2
   },
   {
     "name": "codearts",
@@ -556,11 +556,6 @@
     "published_at": "2026-10-10",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.7/newapi-0.1.7.cphplugin",
     "sha256": "0d65a3f65914f6cb00324fb8b7b589d7dd608d01f434f1fa17b012462e98976b",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.7/manifest.json",
-      "sha256": "12f02b55b62b105ef50c56e89e66575859747f4e61f0b0bc5154d32f3f5fb6ec"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -576,7 +571,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/newapi-v0.1.7/manifest.json",
+      "sha256": "12f02b55b62b105ef50c56e89e66575859747f4e61f0b0bc5154d32f3f5fb6ec"
+    },
+    "protocol_version": 2
   },
   {
     "name": "notion",
@@ -877,15 +877,20 @@
   },
   {
     "name": "workbuddy",
-    "version": "0.1.9",
+    "version": "0.1.10",
     "author": "cph",
     "label": {
       "en": "WorkBuddy",
       "zh": "WorkBuddy"
     },
-    "published_at": "2026-10-10",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.9/workbuddy-0.1.9.cphplugin",
-    "sha256": "0617ecd759c3616406a07adaa329fd02e0af33aa526aba47ba932c3f25eeae10",
+    "published_at": "2026-10-12",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.10/workbuddy-0.1.10.cphplugin",
+    "sha256": "33be3d115e6455d00fd635738dc378297f604f74892800e27d497143f1932897",
+    "protocol_version": 2,
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.10/manifest.json",
+      "sha256": "d9b34acf78aa0f976738b4b5e76cd389ddfc38e2d92d99c6acd3fadded420535"
+    },
     "platforms": {
       "windows": [
         "amd64"
@@ -901,12 +906,7 @@
       "android": [
         "arm64-v8a"
       ]
-    },
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/workbuddy-v0.1.9/manifest.json",
-      "sha256": "592886d808c91518e6ef5ef603d7a7bcf142346b92571f429d87e8b2b40a7832"
-    },
-    "protocol_version": 2
+    }
   },
   {
     "name": "zcode",
