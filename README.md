@@ -22,6 +22,7 @@
 | `commandcode` | Command Code：私有协议（NDJSON）反代 + 设备指纹伪装（按 key 确定性伪造，形态对齐官方 CLI） | chat / models / login / refresh |
 | `todofor` | todofor.ai：REST + 前端 WebSocket 订阅的私有协议，客户端工具走文本协议 | chat / models / login |
 | `notion` | Notion AI：`/api/v3` NDJSON 流私有协议，静态 Cookie（token_v2 + space_id）登录，无刷新态 | chat / models / login / refresh |
+| `logicc` | Logicc(app.logicc.com):Clerk 会话(`__client` + Session ID)登录并按需刷新 JWT,上游为会话 + 提示词的 AI SDK v6 事件流,客户端工具走文本协议 | chat / models / login / refresh |
 | `qoder` | Qoder：PAT → jobToken 签名换取，OpenAI 兼容端点，token 到期前自动轮换 | chat / models / login / refresh |
 | `mirasim` | Mirasim 私有中继：邮件验证码 / 凭据导入登录，Ed25519 签名 + 封密元数据，Claude 走 messages、GPT 走 responses | chat / models / login / refresh |
 | `cline` | Cline（api.cline.bot）：WorkOS 设备码授权 → refreshToken，OpenAI 兼容上游 | chat / models / login / refresh |

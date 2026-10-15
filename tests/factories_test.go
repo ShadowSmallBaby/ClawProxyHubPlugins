@@ -19,6 +19,7 @@ import (
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/improvado"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/joycode"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/lobsterai"
+	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/logicc"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/loomy"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/mimo"
 	"github.com/ShadowSmallBaby/ClawProxyHubPlugins/plugins-go/mirasim"
@@ -55,6 +56,7 @@ func TestPluginFactories(t *testing.T) {
 		{"improvado", improvado.New},
 		{"joycode", joycode.New},
 		{"lobsterai", lobsterai.New},
+		{"logicc", logicc.New},
 		{"loomy", loomy.New},
 		{"mimo", mimo.New},
 		{"mirasim", mirasim.New},
