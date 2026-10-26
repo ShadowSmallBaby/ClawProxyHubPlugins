@@ -217,7 +217,10 @@ func (s *signer) signHeaders(ctx *signCtx) (map[string]string, bool) {
 	if !ok {
 		return ctx.headers, false
 	}
-	sessionID := strings.TrimSpace(ctx.headers["X-Session-Id"])
+	// fix: 会话 id 键统一小写 "x-session-id"——chat.go 以小写写入本 map，Go map
+	// 键大小写敏感，原大写读键恒空 → 提前 fail-open → V4 签名从未实际发出；
+	// 读取/skip/输出三处同形（http.Header.Set 出站时由标准库规范化）。
+	sessionID := strings.TrimSpace(ctx.headers["x-session-id"])
 	if sessionID == "" {
 		return ctx.headers, false
 	}
@@ -268,7 +271,7 @@ func (s *signer) signHeaders(ctx *signCtx) (map[string]string, bool) {
 	out := map[string]string{}
 	for k, v := range ctx.headers {
 		switch k {
-		case "X-Client-Ts", "X-Client-Version", "X-Client-Sig", "X-Client-Nonce", "X-App-Id", "X-Client-Pow", "X-Session-Id":
+		case "X-Client-Ts", "X-Client-Version", "X-Client-Sig", "X-Client-Nonce", "X-App-Id", "X-Client-Pow", "x-session-id":
 			continue
 		}
 		out[k] = v
@@ -276,7 +279,7 @@ func (s *signer) signHeaders(ctx *signCtx) (map[string]string, bool) {
 	out["X-Client-Ts"] = ts
 	out["X-Client-Version"] = ctx.appVersion
 	out["X-Client-Sig"] = base64.StdEncoding.EncodeToString(sig)
-	out["X-Session-Id"] = sessionID
+	out["x-session-id"] = sessionID
 	out["X-Client-Nonce"] = nonce
 	out["X-App-Id"] = signingAppID
 	out["X-Client-Pow"] = pow
