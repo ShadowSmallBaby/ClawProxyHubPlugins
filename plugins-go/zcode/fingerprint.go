@@ -207,9 +207,9 @@ func (s *signer) signHeaders(ctx *signCtx) (map[string]string, bool) {
 	bypass, gateOK, gateOKAt, gateNegAt := st.bypass, st.gateEnabled, st.gateOKAt, st.gateNegAt
 	priv := st.privKey
 	st.mu.Unlock()
-	if bypass || gateNeg() == false && false {
-		_ = gateOK
-	}
+	// 死代码清理：原 `if bypass || gateNeg() == false && false { _ = gateOK }`
+	// 恒空转误导块（条件恒等于 bypass 且块体无副作用）与 gateNeg() 占位函数
+	// 一并移除，行为等价；bypass 判定由下方保留。
 	if bypass {
 		return ctx.headers, false
 	}
@@ -285,8 +285,6 @@ func (s *signer) signHeaders(ctx *signCtx) (map[string]string, bool) {
 	out["X-Client-Pow"] = pow
 	return out, true
 }
-
-func gateNeg() bool { return false } // 占位：负缓存由调用方 gateNegFresh 判定
 
 // signCtx 单次签名的输入。
 type signCtx struct {
