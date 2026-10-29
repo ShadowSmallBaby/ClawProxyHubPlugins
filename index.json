@@ -457,11 +457,6 @@
     "published_at": "2026-10-15",
     "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/logicc-v0.1.0/logicc-0.1.0.cphplugin",
     "sha256": "9ca062febf869d1e1b3478ed57fd28e0b02db6e9fe7b18664186851437482e75",
-    "protocol_version": 2,
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/logicc-v0.1.0/manifest.json",
-      "sha256": "b826f2abcb77f7f8c48acfc2913d8da562b3571d798bbba9ead312f1be732c6d"
-    },
     "platforms": {
       "windows": [
         "amd64"
@@ -477,7 +472,12 @@
       "android": [
         "arm64-v8a"
       ]
-    }
+    },
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/logicc-v0.1.0/manifest.json",
+      "sha256": "b826f2abcb77f7f8c48acfc2913d8da562b3571d798bbba9ead312f1be732c6d"
+    },
+    "protocol_version": 2
   },
   {
     "name": "loomy",
@@ -943,15 +943,20 @@
   },
   {
     "name": "zcode",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "author": "cph",
     "label": {
       "en": "ZCode",
       "zh": "ZCode"
     },
-    "published_at": "2026-10-10",
-    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/zcode-v0.1.3/zcode-0.1.3.cphplugin",
-    "sha256": "5d0a212b5dc2133e4aad3245225ddb87ef1b87f1decea3352d753948044a5c72",
+    "published_at": "2026-10-29",
+    "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/zcode-v0.1.4/zcode-0.1.4.cphplugin",
+    "sha256": "7a68c3cef035460f076c9163cb255042b80533e56bdafed0247ed994ab2669c7",
+    "protocol_version": 2,
+    "release_manifest": {
+      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/zcode-v0.1.4/manifest.json",
+      "sha256": "eb0bd039049ab439ee33628100c224021167d4a62eb9373af6f921df332a18b6"
+    },
     "platforms": {
       "windows": [
         "amd64"
@@ -967,11 +972,6 @@
       "android": [
         "arm64-v8a"
       ]
-    },
-    "release_manifest": {
-      "download_url": "https://github.com/ShadowSmallBaby/ClawProxyHubPlugins/releases/download/zcode-v0.1.3/manifest.json",
-      "sha256": "5adc36c5c470c4f5793a45c0867115ba11d3af86da716628c16f0abbfae99eae"
-    },
-    "protocol_version": 2
+    }
   }
 ]
