@@ -33,9 +33,12 @@ func (p *plugin) signerFor() *signer {
 }
 
 // upstreamBase 上游 Anthropic 端点。
+// fix: bigmodel 分支原与 zai 同值（错指 api.z.ai）——ZCode 现行目录里 bigmodel
+// provider 的 baseUrl 为 https://open.bigmodel.cn/api/anthropic（client/configs
+// 实测），oauth_bigmodel 账号对话此前必错端点。
 func upstreamBase(provider string) string {
 	if provider == "bigmodel" {
-		return "https://api.z.ai/api/anthropic"
+		return "https://open.bigmodel.cn/api/anthropic"
 	}
 	return "https://api.z.ai/api/anthropic"
 }
@@ -175,21 +178,40 @@ func (p *plugin) applyStartPlanBody(body map[string]interface{}, cred *credentia
 	}, "\n")
 
 	stableText := strings.Join(stableArr, "\n\n")
-	dynamic := strings.Join([]string{dynBefore, env, dynAfter}, "\n\n")
+	// fix: 客户端 system 文本并入第三块 dynamic 尾部，恒 3 块——ZCode 客户端把
+	// 每个 dynamic 段以 "\n\n" join 进同一块、从不发第四块；zcode.z.ai 对第四块
+	// 以 405/3012 拒载（magpie-community/plugins dress #343 同型）。原实现把客户端
+	// 块追加为第四+块。
+	var own []string
+	if existing, ok := body["system"]; ok {
+		for _, b := range normalizeUserSystem(existing) {
+			if s, ok := b["text"].(string); ok {
+				own = append(own, s)
+			}
+		}
+	}
+	dynamic := strings.Join(append([]string{dynBefore, env, dynAfter}, own...), "\n\n")
 
 	system := []map[string]interface{}{
 		{"type": "text", "text": cliPrefix, "cache_control": map[string]string{"type": "ephemeral"}},
 		{"type": "text", "text": stableText, "cache_control": map[string]string{"type": "ephemeral"}},
 		{"type": "text", "text": "\n\n" + dynamic, "cache_control": map[string]string{"type": "ephemeral"}},
 	}
-	// 客户端 system 块保留在官方块之后（剥 cache_control）
-	if existing, ok := body["system"]; ok {
-		system = append(system, normalizeUserSystem(existing)...)
-	}
 	body["system"] = system
 
-	// context_prefix：currentDate <system-reminder> 前缀 user 消息
-	if msgs, ok := body["messages"].([]interface{}); ok && len(msgs) > 0 {
+	// context_prefix：currentDate <system-reminder> 前缀 user 消息。
+	// fix: anthropicup.ChatBody 的 messages 为 []map[string]interface{}，原实现的
+	// []interface{} 断言恒失败 → 前缀被静默跳过；两种形态均归一化处理。
+	var msgs []interface{}
+	switch v := body["messages"].(type) {
+	case []interface{}:
+		msgs = v
+	case []map[string]interface{}:
+		for _, m := range v {
+			msgs = append(msgs, m)
+		}
+	}
+	if len(msgs) > 0 {
 		date := time.Now().Format("2006-01-02")
 		currentDate := cpMap["currentDateHeading"] + "\n" + strings.Replace(cpMap["currentDateLine"], "{date}", date, 1)
 		text := srMap["open"] + strings.Join([]string{cpMap["intro"], currentDate, "", cpMap["outro"]}, "\n") + srMap["close"]
